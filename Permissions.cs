@@ -331,6 +331,9 @@ namespace TShockAPI
 		[Description("Player can use the Enchanted Sundial item.")]
 		public static readonly string usesundial = "tshock.world.time.usesundial";
 
+		[Description("Player can use the Enchanted Moondial item.")]
+		public static readonly string usemoondial = "tshock.world.time.usemoondial";
+
 		[Description("User can grow plants.")]
 		public static readonly string grow = "tshock.world.grow";
 

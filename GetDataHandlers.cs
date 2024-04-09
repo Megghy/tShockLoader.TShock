@@ -3469,8 +3469,12 @@ namespace TShockAPI
 				args.Player.Spawn(PlayerSpawnContext.RecallFromItem);
 				return true;
 			}
-
-			if (type == 3)
+			else if (type == 2)
+			{
+				// Plays SoundID.Item1
+				return false;
+			}
+			else if (type == 3)
 			{
 				if (!args.Player.HasPermission(Permissions.usesundial))
 				{
@@ -3489,6 +3493,42 @@ namespace TShockAPI
 						args.Player.SendErrorMessage(GetString("You must set ForceTime to normal via config to use the Enchanted Sundial."));
 					return true;
 				}
+			}
+			else if (type == 4)
+			{
+				// Big Mimic Spawn Smoke
+				return false;
+			}
+			else if (type == 5)
+			{
+				// Register Kill for Torch God in Bestiary
+				return false;
+			}
+			else if (type == 6)
+			{
+				if (!args.Player.HasPermission(Permissions.usemoondial))
+				{
+					TShock.Log.ConsoleDebug(GetString($"GetDataHandlers / HandleSpecial rejected enchanted moondial permission {args.Player.Name}"));
+					args.Player.SendErrorMessage(GetString("You do not have permission to use the Enchanted Moondial."));
+					return true;
+				}
+				else if (TShock.Config.Settings.ForceTime != "normal")
+				{
+					TShock.Log.ConsoleDebug(GetString($"GetDataHandlers / HandleSpecial rejected enchanted moondial permission (ForceTime) {args.Player.Name}"));
+					if (!args.Player.HasPermission(Permissions.cfgreload))
+					{
+						args.Player.SendErrorMessage(GetString("You cannot use the Enchanted Moondial because time is stopped."));
+					}
+					else
+						args.Player.SendErrorMessage(GetString("You must set ForceTime to normal via config to use the Enchanted Moondial."));
+					return true;
+				}
+			}
+			else if (!args.Player.HasPermission($"tshock.specialeffects.{type}"))
+			{
+				args.Player.SendErrorMessage(GetString("You do not have permission to use this effect."));
+				TShock.Log.ConsoleError(GetString("Unrecognized special effect (Packet 51). Please report this to the TShock developers."));
+				return true;
 			}
 
 			return false;
@@ -3785,7 +3825,7 @@ namespace TShockAPI
 			if (type == 0 && !args.Player.HasPermission(Permissions.rod))
 			{
 				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleTeleport rejected rod type {0} {1}", args.Player.Name, type));
-				args.Player.SendErrorMessage(GetString("You do not have permission to teleport using items.")); // Was going to write using RoD but Hook of Disonnance and Potion of Return both use the same teleport packet as RoD. 
+				args.Player.SendErrorMessage(GetString("You do not have permission to teleport using items.")); // Was going to write using RoD but Hook of Disonnance and Potion of Return both use the same teleport packet as RoD.
 				args.Player.Teleport(args.TPlayer.position.X, args.TPlayer.position.Y); // Suggest renaming rod permission unless someone plans to add separate perms for the other 2 tp items.
 				return true;
 			}
