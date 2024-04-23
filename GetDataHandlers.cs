@@ -3462,12 +3462,16 @@ namespace TShockAPI
 			if (OnNPCSpecial(args.Player, args.Data, id, type))
 				return true;
 
-			if (type == 1 && TShock.Config.Settings.DisableDungeonGuardian)
+			if (type == 1)
 			{
-				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpecial rejected type 1 for {0}", args.Player.Name));
-				args.Player.SendMessage(GetString("The Dungeon Guardian returned you to your spawn point."), Color.Purple);
-				args.Player.Spawn(PlayerSpawnContext.RecallFromItem);
-				return true;
+				if (!args.Player.HasPermission(Permissions.summonboss))
+				{
+					args.Player.SendErrorMessage(GetString("You do not have permission to summon the Skeletron."));
+					TShock.Log.ConsoleDebug(GetString($"GetDataHandlers / HandleNpcStrike rejected Skeletron summon from {args.Player.Name}"));
+					return true;
+				}
+
+				return false;
 			}
 			else if (type == 2)
 			{
