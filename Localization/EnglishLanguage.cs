@@ -20,7 +20,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terraria;
+using Terraria.Initializers;
 using Terraria.Localization;
+using Terraria.UI.Chat;
 
 namespace TShockAPI.Localization
 {
@@ -36,6 +38,8 @@ namespace TShockAPI.Localization
 		private static readonly Dictionary<int, string> Prefixs = new Dictionary<int, string>();
 
 		private static readonly Dictionary<int, string> Buffs = new Dictionary<int, string>();
+
+		private static readonly Dictionary<string,string> VanillaCommands = new Dictionary<string, string>();
 
 		internal static void Initialize()
 		{
@@ -71,6 +75,15 @@ namespace TShockAPI.Localization
 					var i = (int)field.GetValue(null);
 					Prefixs.Add(i, Lang.prefix[i].Value);
 				}
+
+				ChatInitializer.Load();
+				foreach (var command in ChatManager.Commands._localizedCommands)
+				{
+					if (VanillaCommands.ContainsKey(command.Value._name))
+						continue;
+					VanillaCommands.Add(command.Value._name,command.Key.Value);
+				}
+				ChatManager.Commands._localizedCommands.Clear();
 			}
 			finally
 			{
@@ -134,6 +147,19 @@ namespace TShockAPI.Localization
 			if (Buffs.TryGetValue(id, out buff))
 				return buff;
 
+			return null;
+		}
+
+		/// <summary>
+		/// Get vanilla command text in English
+		/// </summary>
+		/// <param name="name">vanilla command name</param>
+		/// <returns>vanilla command text English</returns>
+		public static string GetCommandTextByName(string name)
+		{
+			string commandText;
+			if (VanillaCommands.TryGetValue(name, out commandText))
+				return commandText;
 			return null;
 		}
 	}
