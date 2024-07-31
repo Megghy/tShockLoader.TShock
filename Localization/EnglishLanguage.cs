@@ -39,7 +39,7 @@ namespace TShockAPI.Localization
 
 		private static readonly Dictionary<int, string> Buffs = new Dictionary<int, string>();
 
-		private static readonly Dictionary<string,string> VanillaCommands = new Dictionary<string, string>();
+		private static readonly Dictionary<string,string> VanillaCommandsPrefixs = new Dictionary<string, string>();
 
 		internal static void Initialize()
 		{
@@ -79,9 +79,9 @@ namespace TShockAPI.Localization
 				ChatInitializer.Load();
 				foreach (var command in ChatManager.Commands._localizedCommands)
 				{
-					if (VanillaCommands.ContainsKey(command.Value._name))
+					if (VanillaCommandsPrefixs.ContainsKey(command.Value._name))
 						continue;
-					VanillaCommands.Add(command.Value._name,command.Key.Value);
+					VanillaCommandsPrefixs.Add(command.Value._name,command.Key.Value);
 				}
 				ChatManager.Commands._localizedCommands.Clear();
 			}
@@ -151,14 +151,14 @@ namespace TShockAPI.Localization
 		}
 
 		/// <summary>
-		/// Get vanilla command text in English
+		/// Get vanilla command prefix in English
 		/// </summary>
 		/// <param name="name">vanilla command name</param>
-		/// <returns>vanilla command text English</returns>
-		public static string GetCommandTextByName(string name)
+		/// <returns>vanilla command prefix in English</returns>
+		public static string GetCommandPrefixByName(string name)
 		{
 			string commandText;
-			if (VanillaCommands.TryGetValue(name, out commandText))
+			if (VanillaCommandsPrefixs.TryGetValue(name, out commandText))
 				return commandText;
 			return null;
 		}
