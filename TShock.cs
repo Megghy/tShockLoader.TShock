@@ -428,8 +428,6 @@ namespace TShockAPI
 				Hooks.AccountHooks.AccountDelete += OnAccountDelete;
 				Hooks.AccountHooks.AccountCreate += OnAccountCreate;
 
-				On.Terraria.RemoteClient.Reset += RemoteClient_Reset;
-
 				GetDataHandlers.InitGetDataHandler();
 				Commands.InitCommands();
 
@@ -496,12 +494,6 @@ namespace TShockAPI
 				SafeError(ex.ToString());
 				Environment.Exit(1);
 			}
-		}
-
-		private static void RemoteClient_Reset(On.Terraria.RemoteClient.orig_Reset orig, RemoteClient client)
-		{
-			client.ClientUUID = null;
-			orig(client);
 		}
 
 		private static void OnAchievementInitializerLoad(ILContext il)
