@@ -1176,7 +1176,7 @@ namespace TShockAPI
 
 				try
 				{
-					TShock.UserAccounts.SetUserGroup(account, args.Parameters[2]);
+					TShock.UserAccounts.SetUserGroup(args.Player, account, args.Parameters[2]);
 					TShock.Log.ConsoleInfo(GetString("{0} changed account {1} to group {2}.", args.Player.Name, account.Name, args.Parameters[2]));
 					args.Player.SendSuccessMessage(GetString("Account {0} has been changed to group {1}.", account.Name, args.Parameters[2]));
 
@@ -1192,6 +1192,10 @@ namespace TShockAPI
 				catch (UserAccountNotExistException)
 				{
 					args.Player.SendErrorMessage(GetString($"User {account.Name} does not exist."));
+				}
+				catch (UserGroupUpdateLockedException)
+				{
+					args.Player.SendErrorMessage(GetString("Hook blocked the attempt to change the user group."));
 				}
 				catch (UserAccountManagerException e)
 				{
@@ -2044,6 +2048,7 @@ namespace TShockAPI
 		private static void OffNoSave(CommandArgs args)
 		{
 			string reason = ((args.Parameters.Count > 0) ? GetString("Server shutting down: ") + String.Join(" ", args.Parameters) : GetString("Server shutting down."));
+			Netplay.SaveOnServerExit = false;
 			TShock.Utils.StopServer(false, reason);
 		}
 
@@ -3070,12 +3075,12 @@ namespace TShockAPI
 						args.Player.SendErrorMessage(GetString("You do not have permission to teleport all other players."));
 						return;
 					}
-					for (int i = 0; i < Main.maxPlayers; i++)
+					foreach (var player in TShock.Players)
 					{
-						if (Main.player[i].active && (Main.player[i] != args.TPlayer))
+						if (player != null && player.Active && player.Index != args.Player.Index)
 						{
-							if (TShock.Players[i].Teleport(args.TPlayer.position.X, args.TPlayer.position.Y))
-								TShock.Players[i].SendSuccessMessage(GetString("You were teleported to {0}.", args.Player.Name));
+							if (player.Teleport(args.TPlayer.position.X, args.TPlayer.position.Y))
+								player.SendSuccessMessage(GetString("You were teleported to {0}.", args.Player.Name));
 						}
 					}
 					args.Player.SendSuccessMessage(GetString("Teleported everyone to yourself."));
@@ -4622,21 +4627,22 @@ namespace TShockAPI
 		{
 			if (args.Parameters.Count != 1)
 			{
-				args.Player.SendErrorMessage(GetString("Invalid syntax. Proper syntax: {0}wind <speed>.", Specifier));
+				args.Player.SendErrorMessage(GetString("Invalid syntax. Proper syntax: {0}wind <speed in mph>.", Specifier));
 				return;
 			}
 
-			int speed;
-			if (!int.TryParse(args.Parameters[0], out speed) || speed * 100 < 0)
+			float mph;
+			if (!float.TryParse(args.Parameters[0], out mph) || mph is < -40f or > 40f)
 			{
-				args.Player.SendErrorMessage(GetString("Invalid wind speed."));
+				args.Player.SendErrorMessage(GetString("Invalid wind speed (must be between -40 and 40)."));
 				return;
 			}
 
+			float speed = mph / 50f; // -40 to 40 mph -> -0.8 to 0.8
 			Main.windSpeedCurrent = speed;
 			Main.windSpeedTarget = speed;
 			TSPlayer.All.SendData(PacketTypes.WorldInfo);
-			TSPlayer.All.SendInfoMessage(GetString("{0} changed the wind speed to {1}.", args.Player.Name, speed));
+			TSPlayer.All.SendInfoMessage(GetString("{0} changed the wind speed to {1}mph.", args.Player.Name, mph));
 		}
 
 		#endregion Time/PvpFun Commands
@@ -6462,7 +6468,7 @@ namespace TShockAPI
 					if (target == user)
 						user.SendSuccessMessage(GetString($"You buffed yourself with {TShock.Utils.GetBuffName(id)} ({TShock.Utils.GetBuffDescription(id)}) for {time} seconds."));
 					else
-						target.SendSuccessMessage(GetString($"You have buffed {user.Name} with {TShock.Utils.GetBuffName(id)} ({TShock.Utils.GetBuffDescription(id)}) for {time} seconds!"));
+						user.SendSuccessMessage(GetString($"You have buffed {target.Name} with {TShock.Utils.GetBuffName(id)} ({TShock.Utils.GetBuffDescription(id)}) for {time} seconds!"));
 					if (!args.Silent && target != user)
 						target.SendSuccessMessage(GetString($"{user.Name} has buffed you with {TShock.Utils.GetBuffName(id)} ({TShock.Utils.GetBuffDescription(id)}) for {time} seconds!"));
 				}
