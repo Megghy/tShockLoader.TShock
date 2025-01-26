@@ -1149,11 +1149,15 @@ namespace TShockAPI
 		/// <param name="empty">If the server is empty; determines if we should use Utils.GetActivePlayerCount() for player count or 0.</param>
 		internal void SetConsoleTitle(bool empty)
 		{
+			if (ShouldSkipTitle)
+				return;
 			Console.Title = GetString("{0}{1}/{2} on {3} @ {4}:{5} (TShock for Terraria v{6})",
 					!string.IsNullOrWhiteSpace(TShock.Config.Settings.ServerName) ? TShock.Config.Settings.ServerName + " - " : "",
 					empty ? 0 : GetActivePlayerCount(),
 					TShock.Config.Settings.MaxSlots, Main.worldName, Netplay.ServerIP.ToString(), Netplay.ListenPort, TShock.VersionNum);
 		}
+		// Some terminals doesn't supports XTerm escape sequences for setting the title
+		private static bool ShouldSkipTitle = !System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) && !(Environment.GetEnvironmentVariable("TERM")?.Contains("xterm") ?? false);
 
 		/// <summary>Determines the distance between two vectors.</summary>
 		/// <param name="value1">The first vector location.</param>
