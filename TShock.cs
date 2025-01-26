@@ -1495,11 +1495,11 @@ namespace TShockAPI
 				{
 					if (!String.IsNullOrEmpty(text))
 					{
-						text = item.Key.Value + ' ' + text;
+						text = EnglishLanguage.GetCommandPrefixByName(item.Value._name) + ' ' + text;
 					}
 					else
 					{
-						text = item.Key.Value;
+						text = EnglishLanguage.GetCommandPrefixByName(item.Value._name);
 					}
 					break;
 				}
