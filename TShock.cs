@@ -1182,16 +1182,16 @@ namespace TShockAPI
 					if (player.RecentFuse > 0)
 						player.RecentFuse--;
 
-					if ((Main.ServerSideCharacter) && (player.TPlayer.SpawnX > 0) && (player.sX != player.TPlayer.SpawnX))
+					if (Main.ServerSideCharacter && player.initialSpawn)
 					{
-						player.sX = player.TPlayer.SpawnX;
-						player.sY = player.TPlayer.SpawnY;
-					}
+						player.initialSpawn = false;
 
-					if ((Main.ServerSideCharacter) && (player.sX > 0) && (player.sY > 0) && (player.TPlayer.SpawnX < 0))
-					{
-						player.TPlayer.SpawnX = player.sX;
-						player.TPlayer.SpawnY = player.sY;
+						// reassert the correct spawnpoint value after the game's Spawn handler changed it
+						player.TPlayer.SpawnX = player.initialServerSpawnX;
+						player.TPlayer.SpawnY = player.initialServerSpawnY;
+
+						player.TeleportSpawnpoint();
+						TShock.Log.ConsoleDebug(GetString("OnSecondUpdate / initial ssc spawn for {0} at ({1}, {2})", player.Name, player.TPlayer.SpawnX, player.TPlayer.SpawnY));
 					}
 
 					if (player.RPPending > 0)

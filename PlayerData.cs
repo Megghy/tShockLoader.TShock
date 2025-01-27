@@ -104,16 +104,8 @@ namespace TShockAPI
 			this.maxHealth = player.TPlayer.statLifeMax;
 			this.mana = player.TPlayer.statMana;
 			this.maxMana = player.TPlayer.statManaMax;
-			if (player.sX > 0 && player.sY > 0)
-			{
-				this.spawnX = player.sX;
-				this.spawnY = player.sY;
-			}
-			else
-			{
-				this.spawnX = player.TPlayer.SpawnX;
-				this.spawnY = player.TPlayer.SpawnY;
-			}
+			this.spawnX = player.TPlayer.SpawnX;
+			this.spawnY = player.TPlayer.SpawnY;
 			extraSlot = player.TPlayer.extraAccessory ? 1 : 0;
 			this.skinVariant = player.TPlayer.skinVariant;
 			this.hair = player.TPlayer.hair;
@@ -266,8 +258,6 @@ namespace TShockAPI
 			player.TPlayer.statManaMax = this.maxMana;
 			player.TPlayer.SpawnX = this.spawnX;
 			player.TPlayer.SpawnY = this.spawnY;
-			player.sX = this.spawnX;
-			player.sY = this.spawnY;
 			player.TPlayer.hairDye = this.hairDye;
 			player.TPlayer.anglerQuestsFinished = this.questsCompleted;
 			player.TPlayer.UsingBiomeTorches = this.usingBiomeTorches == 1;

@@ -177,8 +177,13 @@ namespace TShockAPI
 		/// </summary>
 		public int RPPending = 0;
 
-		public int sX = -1;
-		public int sY = -1;
+
+		public bool initialSpawn = false;
+		public int initialServerSpawnX = -2;
+		public int initialServerSpawnY = -2;
+		public bool spawnSynced = false;
+		public int initialClientSpawnX = -2;
+		public int initialClientSpawnY = -2;
 
 		/// <summary>
 		/// A queue of tiles destroyed by the player for reverting.
@@ -1384,6 +1389,25 @@ namespace TShockAPI
 		}
 
 		/// <summary>
+		/// Teleports the player to their spawnpoint. 
+		/// Teleports to main spawnpoint if their bed is not active.
+		/// Supports SSC.
+		/// </summary>
+		public bool TeleportSpawnpoint()
+		{
+			// NOTE: it is vanilla behaviour to not permanently override the spawnpoint if the bed spawn is broken/invalid
+			int x = TPlayer.SpawnX;
+			int y = TPlayer.SpawnY;
+			if ((x == -1 && y == -1) || 
+				!Main.tile[x, y - 1].active() || Main.tile[x, y - 1].type != TileID.Beds || !WorldGen.StartRoomCheck(x, y - 1))
+			{
+				x = Main.spawnTileX;
+				y = Main.spawnTileY;
+			}
+			return Teleport(x * 16, y * 16 - 48);
+		}
+
+		/// <summary>
 		/// Heals the player.
 		/// </summary>
 		/// <param name="health">Heal health amount.</param>
@@ -1397,14 +1421,7 @@ namespace TShockAPI
 		/// </summary>
 		public void Spawn(PlayerSpawnContext context, int? respawnTimer = null)
 		{
-			if (this.sX > 0 && this.sY > 0)
-			{
-				Spawn(this.sX, this.sY, context, respawnTimer);
-			}
-			else
-			{
-				Spawn(TPlayer.SpawnX, TPlayer.SpawnY, context, respawnTimer);
-			}
+			Spawn(TPlayer.SpawnX, TPlayer.SpawnY, context, respawnTimer);
 		}
 
 		/// <summary>
