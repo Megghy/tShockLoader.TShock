@@ -402,7 +402,7 @@ namespace TShockAPI
 				{"serverversion", Main.versionNumber},
 				{"tshockversion", TShock.VersionNum},
 				{"port", TShock.Config.Settings.ServerPort},
-				{"playercount", Main.player.Where(p => null != p && p.active).Count()},
+				{"playercount", TShock.Utils.GetActivePlayerCount()},
 				{"maxplayers", TShock.Config.Settings.MaxSlots},
 				{"world", (TShock.Config.Settings.UseServerName ? TShock.Config.Settings.ServerName : Main.worldName)},
 				{"uptime", (DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime).ToString(@"d'.'hh':'mm':'ss")},
@@ -555,7 +555,8 @@ namespace TShockAPI
 			{
 				try
 				{
-					TShock.UserAccounts.SetUserGroup(account, group);
+					TShock.UserAccounts.SetUserGroup(new TSRestPlayer(args.TokenData.Username, TShock.Groups.GetGroupByName(args.TokenData.UserGroupName)),
+						account, group);
 					response.Add("group-response", "Group updated successfully");
 				}
 				catch (Exception e)
@@ -944,8 +945,8 @@ namespace TShockAPI
 		[Token]
 		private object PlayerList(RestRequestArgs args)
 		{
-			var activeplayers = Main.player.Where(p => null != p && p.active).ToList();
-			return new RestObject() { { "players", string.Join(", ", activeplayers.Select(p => p.name)) } };
+			var activeplayers = TShock.Players.Where(p => null != p && p.Active).Select(p => p.Name);
+			return new RestObject() { { "players", string.Join(", ", activeplayers) } };
 		}
 
 		[Description("Fetches detailed user information on all connected users, and can be filtered by specifying a key value pair filter users where the key is a field and the value is a users field value.")]
