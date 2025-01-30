@@ -351,6 +351,9 @@ namespace TShockAPI
 		/// <summary>Determines if the player is disabled for not clearing their trash. A re-login is the only way to reset this.</summary>
 		public bool IsDisabledPendingTrashRemoval;
 
+		/// <summary>Determines if the player has finished the handshake (Sent all necessary packets for connection, such as Request World Data, Spawn Player, etc). A normal client would do all of this no problem.</summary>
+		public bool FinishedHandshake = false;
+
 		/// <summary>Checks to see if active throttling is happening on events by Bouncer. Rejects repeated events by malicious clients in a short window.</summary>
 		/// <returns>If the player is currently being throttled by Bouncer, or not.</returns>
 		public bool IsBouncerThrottled()

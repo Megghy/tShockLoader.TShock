@@ -1399,7 +1399,8 @@ namespace TShockAPI
 				return;
 			}
 
-			Bans.CheckBan(player);
+			if (Bans.CheckBan(player))
+				return;
 		}
 
 		/// <summary>OnLeave - Called when a player leaves the server.</summary>
@@ -1439,7 +1440,7 @@ namespace TShockAPI
 
 			if (tsplr.ReceivedInfo)
 			{
-				if (!tsplr.SilentKickInProgress && tsplr.State >= 3)
+				if (!tsplr.SilentKickInProgress && tsplr.State >= 3 && tsplr.FinishedHandshake) //The player has left, do not broadcast any clients exploiting the behaviour of not spawning their player.
 					Utils.Broadcast(GetString("{0} has left.", tsplr.Name), Color.Yellow);
 				Log.Info(GetString("{0} disconnected.", tsplr.Name));
 
@@ -1459,6 +1460,9 @@ namespace TShockAPI
 					tsplr.tempGroupTimer.Stop();
 				}
 			}
+
+			
+			tsplr.FinishedHandshake = false;
 
 			// Fire the OnPlayerLogout hook too, if the player was logged in and they have a TSPlayer object.
 			if (tsplr.IsLoggedIn)
@@ -1484,6 +1488,12 @@ namespace TShockAPI
 
 			var tsplr = Players[args.Who];
 			if (tsplr == null)
+			{
+				args.Handled = true;
+				return;
+			}
+
+			if (!tsplr.FinishedHandshake)
 			{
 				args.Handled = true;
 				return;
@@ -1705,14 +1715,14 @@ namespace TShockAPI
 				Log.Info(GetString("{0} ({1}) from '{2}' group from '{3}' joined. ({4}/{5})", player.Name, player.IP,
 									   player.Group.Name, player.Country, TShock.Utils.GetActivePlayerCount(),
 									   TShock.Config.Settings.MaxSlots));
-				if (!player.SilentJoinInProgress)
+				if (!player.SilentJoinInProgress && player.FinishedHandshake)
 					Utils.Broadcast(GetString("{0} ({1}) has joined.", player.Name, player.Country), Color.Yellow);
 			}
 			else
 			{
 				Log.Info(GetString("{0} ({1}) from '{2}' group joined. ({3}/{4})", player.Name, player.IP,
 									   player.Group.Name, TShock.Utils.GetActivePlayerCount(), TShock.Config.Settings.MaxSlots));
-				if (!player.SilentJoinInProgress)
+				if (!player.SilentJoinInProgress && player.FinishedHandshake)
 					Utils.Broadcast(GetString("{0} has joined.", player.Name), Color.Yellow);
 			}
 
