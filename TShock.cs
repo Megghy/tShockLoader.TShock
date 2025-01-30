@@ -1376,6 +1376,8 @@ namespace TShockAPI
 					}
 				}
 			}
+
+			Bans.CheckBan(player);
 			Players[args.Who] = player;
 		}
 
