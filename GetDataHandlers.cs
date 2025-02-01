@@ -2726,6 +2726,8 @@ namespace TShockAPI
 			short numberOfDeathsPVP = args.Data.ReadInt16();
 			PlayerSpawnContext context = (PlayerSpawnContext)args.Data.ReadByte();
 
+			args.Player.FinishedHandshake = true;
+
 			if (OnPlayerSpawn(args.Player, args.Data, player, spawnx, spawny, respawnTimer, numberOfDeathsPVE, numberOfDeathsPVP, context))
 				return true;
 
@@ -2762,6 +2764,7 @@ namespace TShockAPI
 				args.Player.Dead = true;
 			else
 				args.Player.Dead = false;
+
 			return false;
 		}
 
