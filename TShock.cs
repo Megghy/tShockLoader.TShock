@@ -1461,7 +1461,8 @@ namespace TShockAPI
 				}
 			}
 
-			
+			TShock.Log.ConsoleInfo($"Setting handshake to false for {tsplr.Name}");
+
 			tsplr.FinishedHandshake = false;
 
 			// Fire the OnPlayerLogout hook too, if the player was logged in and they have a TSPlayer object.

@@ -2726,7 +2726,8 @@ namespace TShockAPI
 			short numberOfDeathsPVP = args.Data.ReadInt16();
 			PlayerSpawnContext context = (PlayerSpawnContext)args.Data.ReadByte();
 
-			args.Player.FinishedHandshake = args.Player.State == 3; //If the player has requested world data before sending spawn player, this should be set to 3, otherwise it'll be set to 1.
+			if (args.Player.State >= 3 && !args.Player.FinishedHandshake)
+				args.Player.FinishedHandshake = true; //If the player has requested world data before sending spawn player, this should be equal to or greater than 3, otherwise it'll usually be 1. Also only set this once to remove redundant updates.
 
 			if (OnPlayerSpawn(args.Player, args.Data, player, spawnx, spawny, respawnTimer, numberOfDeathsPVE, numberOfDeathsPVP, context))
 				return true;
