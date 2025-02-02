@@ -183,7 +183,7 @@ namespace TShockAPI
 		/// <returns>The number of active players on the server.</returns>
 		public int GetActivePlayerCount()
 		{
-			return TShock.Players.Count(p => null != p && p.Active);
+			return TShock.Players.Count(p => null != p && p.Active && p.FinishedHandshake);
 		}
 
 		//Random should not be generated in a method

@@ -5363,7 +5363,7 @@ namespace TShockAPI
 
 			foreach (TSPlayer ply in TShock.Players)
 			{
-				if (ply != null && ply.Active)
+				if (ply != null && ply.Active && ply.FinishedHandshake)
 				{
 					if (displayIdsRequested)
 						if (ply.Account != null)
