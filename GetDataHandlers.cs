@@ -2618,7 +2618,7 @@ namespace TShockAPI
 
 		private static bool HandleConnecting(GetDataHandlerArgs args)
 		{
-			var account = TShock.UserAccounts.GetUserAccountByName(args.Player.Name);//
+			var account = TShock.UserAccounts.GetUserAccountByName(args.Player.Name);
 			args.Player.DataWhenJoined = new PlayerData(args.Player);
 			args.Player.DataWhenJoined.CopyCharacter(args.Player);
 			args.Player.PlayerData = new PlayerData(args.Player);
@@ -2628,8 +2628,9 @@ namespace TShockAPI
 			{
 				if (account.UUID == args.Player.UUID)
 				{
-					if (args.Player.State == 1)
-						args.Player.State = 2;
+					if (args.Player.State == (int)ClientState.ClientReceivingPlayerSlot)
+						args.Player.State = (int)ClientState.ClientSentPlayerInformation;
+
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 
 					var group = TShock.Groups.GetGroupByName(account.Group);
@@ -2687,8 +2688,9 @@ namespace TShockAPI
 				return true;
 			}
 
-			if (args.Player.State == 1)
+			if (args.Player.State == (int)ClientState.ClientReceivingPlayerSlot)
 				args.Player.State = 2;
+
 			NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 			return true;
 		}
@@ -2726,8 +2728,8 @@ namespace TShockAPI
 			short numberOfDeathsPVP = args.Data.ReadInt16();
 			PlayerSpawnContext context = (PlayerSpawnContext)args.Data.ReadByte();
 
-			if (args.Player.State >= 3 && !args.Player.FinishedHandshake)
-				args.Player.FinishedHandshake = true; //If the player has requested world data before sending spawn player, this should be equal to or greater than 3, otherwise it'll usually be 1. Also only set this once to remove redundant updates.
+			if (args.Player.State >= (int)ClientState.ClientRequestedWorldData && !args.Player.FinishedHandshake)
+				args.Player.FinishedHandshake = true; //If the player has requested world data before sending spawn player, they should be at the obvious ClientRequestedWorldData state. Also only set this once to remove redundant updates.
 
 			if (OnPlayerSpawn(args.Player, args.Data, player, spawnx, spawny, respawnTimer, numberOfDeathsPVE, numberOfDeathsPVP, context))
 				return true;
@@ -3219,8 +3221,9 @@ namespace TShockAPI
 					args.Player.RequiresPassword = false;
 					args.Player.PlayerData = TShock.CharacterDB.GetPlayerData(args.Player, account.ID);
 
-					if (args.Player.State == 1)
-						args.Player.State = 2;
+					if (args.Player.State == (int)ClientState.ClientReceivingPlayerSlot)
+						args.Player.State = (int)ClientState.ClientSentPlayerInformation;
+
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 
 					var group = TShock.Groups.GetGroupByName(account.Group);
@@ -3267,8 +3270,10 @@ namespace TShockAPI
 				if (TShock.Config.Settings.ServerPassword == password)
 				{
 					args.Player.RequiresPassword = false;
-					if (args.Player.State == 1)
-						args.Player.State = 2;
+
+					if (args.Player.State == (int)ClientState.ClientReceivingPlayerSlot)
+						args.Player.State = (int)ClientState.ClientSentPlayerInformation;
+
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 					return true;
 				}

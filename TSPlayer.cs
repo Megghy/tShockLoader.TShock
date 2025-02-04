@@ -62,6 +62,49 @@ namespace TShockAPI
 		WriteToLogAndConsole
 	}
 
+	/// <summary>
+	/// An enum based on the current client's connection state to the server.
+	/// </summary>
+	public enum ClientState : int
+	{
+		/// <summary>
+		/// The server has accepted the client's connection but now requires a password from them before they can continue. (Only for password protected servers)
+		/// </summary>
+		RequiresPassword = -1,
+		/// <summary>
+		/// The server has accepted the client's connection. In this state, they will send their current version string to the server.
+		/// </summary>
+		ClientConnecting = 0,
+		/// <summary>
+		/// The server has accepted the client's password to connect and/or the server has verified the client's version string as being correct. In this state, the server will send them their user slot and in return, they must send their player information.
+		/// </summary>
+		ClientReceivingPlayerSlot = 1,
+		/// <summary>
+		/// The client has sent their player information. In this state, they must request world data.
+		/// </summary>
+		ClientSentPlayerInformation = 2,
+		/// <summary>
+		/// The client has requested the world data.
+		/// </summary>
+		ClientRequestedWorldData = 3,
+		/// <summary>
+		/// The client has received the world data.
+		/// </summary>
+		ClientReceivedWorldData = 4,
+		/// <summary>
+		/// The client has loaded the world data and map.
+		/// </summary>
+		ClientLoadedWorldData = 5,
+		/// <summary>
+		/// The client is requesting tile data.
+		/// </summary>
+		ClientRequestingTileData = 6,
+		/// <summary>
+		/// The client has sent a SpawnPlayer packet and has finished the connection process.
+		/// </summary>
+		ClientSpawned = 10
+	}
+
 	public class TSPlayer
 	{
 		/// <summary>
@@ -2105,7 +2148,7 @@ namespace TShockAPI
 		/// <summary>
 		/// The list of necessary packets to make sure gets through to the player upon connection (before they finish the handshake).
 		/// </summary>
-		private static readonly HashSet<PacketTypes> NecessaryPackets = new()
+		private static readonly HashSet<PacketTypes> HandshakeNecessaryPackets = new()
 		{
 			PacketTypes.ContinueConnecting,
 			PacketTypes.WorldInfo,
@@ -2121,7 +2164,7 @@ namespace TShockAPI
 		/// </summary>
 		/// <param name="msgType">The packet type to check against the necessary list.</param>
 		/// <returns>Whether the packet is necessary for connection or not</returns>
-		private bool NecessaryPacket(PacketTypes msgType) => NecessaryPackets.Contains(msgType);
+		private bool NecessaryPacket(PacketTypes msgType) => HandshakeNecessaryPackets.Contains(msgType);
 
 		//Todo: Separate this into a few functions. SendTo, SendToAll, etc
 		/// <summary>
@@ -2143,7 +2186,7 @@ namespace TShockAPI
 			if (!NecessaryPacket(msgType) && !FinishedHandshake)
 				return;
 
-			if (msgType == PacketTypes.WorldInfo && State < 3) //If the player has requested the world data, their state will be 3.
+			if (msgType == PacketTypes.WorldInfo && State < (int)ClientState.ClientRequestedWorldData)
 				return;
 
 			NetMessage.SendData((int)msgType, Index, -1, text == null ? null : NetworkText.FromLiteral(text), number, number2, number3, number4, number5);
