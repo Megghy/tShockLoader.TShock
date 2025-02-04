@@ -2530,8 +2530,8 @@ namespace TShockAPI
 				{
 					foreach (TSPlayer ply in TShock.Players.Where(p => p != null && p.Active && p.TPlayer.name.ToLower().Equals(args.Parameters[0].ToLower())))
 					{
-						//this will always tell the client that they have not done the quest today.
-						ply.SendData((PacketTypes)74, "");
+						//this will always tell the client that they have not done the quest today. * Update: We have a definition for Packet 74, why are you sending it as a cast to PacketTypes?
+						ply.SendData(PacketTypes.AnglerQuest, "");
 					}
 					args.Player.SendSuccessMessage(GetString("Removed {0} players from the angler quest completion list for today.", result));
 				}
