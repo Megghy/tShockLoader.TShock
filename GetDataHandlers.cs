@@ -3441,9 +3441,9 @@ namespace TShockAPI
 				if (buff == 10 && TShock.Config.Settings.DisableInvisPvP && args.TPlayer.hostile)
 					buff = 0;
 
-				if (Netplay.Clients[args.TPlayer.whoAmI].State < 2 && (buff == 156 || buff == 47 || buff == 149))
+				if (Netplay.Clients[args.TPlayer.whoAmI].State < (int)ConnectionState.AwaitingPlayerInfo && (buff == 156 || buff == 47 || buff == 149))
 				{
-					TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandlePlayerBuffList zeroed player buff due to below state 2 {0} {1}", args.Player.Name, buff));
+					TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandlePlayerBuffList zeroed player buff due to below state awaiting player information {0} {1}", args.Player.Name, buff));
 					buff = 0;
 				}
 
