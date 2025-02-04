@@ -2102,6 +2102,28 @@ namespace TShockAPI
 			SendData(PacketTypes.PlayerAddBuff, number: Index, number2: type, number3: time);
 		}
 
+
+		/// <summary>
+		/// Determines if an outgoing packet is necessary to send to a player before they have finished the connection handshake.
+		/// </summary>
+		/// <param name="msgType">The packet type to check against the necessary list.</param>
+		/// <returns></returns>
+		private bool NecessaryPacket(PacketTypes msgType)
+		{
+			List<PacketTypes> ConnectionPackets = new List<PacketTypes>()
+			{
+				PacketTypes.ContinueConnecting,
+				PacketTypes.WorldInfo,
+				PacketTypes.Status,
+				PacketTypes.Disconnect,
+				PacketTypes.TileFrameSection,
+				PacketTypes.TileSendSection,
+				PacketTypes.PlayerSpawnSelf
+			};
+
+			return ConnectionPackets.Contains(msgType);
+		}
+
 		//Todo: Separate this into a few functions. SendTo, SendToAll, etc
 		/// <summary>
 		/// Sends data to the player.
@@ -2117,6 +2139,12 @@ namespace TShockAPI
 			float number3 = 0f, float number4 = 0f, int number5 = 0)
 		{
 			if (RealPlayer && !ConnectionAlive)
+				return;
+
+			if (!NecessaryPacket(msgType) && !FinishedHandshake)
+				return;
+
+			if (msgType == PacketTypes.WorldInfo && State < 3) //If the player has requested the world data, their state will be 3.
 				return;
 
 			NetMessage.SendData((int)msgType, Index, -1, text == null ? null : NetworkText.FromLiteral(text), number, number2, number3, number4, number5);

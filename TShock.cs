@@ -1494,6 +1494,7 @@ namespace TShockAPI
 
 			if (!tsplr.FinishedHandshake)
 			{
+				tsplr.Kick(GetString("Your client didn't finish the handshake."), true);
 				args.Handled = true;
 				return;
 			}
