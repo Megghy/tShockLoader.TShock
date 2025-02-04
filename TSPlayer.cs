@@ -2102,27 +2102,26 @@ namespace TShockAPI
 			SendData(PacketTypes.PlayerAddBuff, number: Index, number2: type, number3: time);
 		}
 
+		/// <summary>
+		/// The list of necessary packets to make sure gets through to the player upon connection (before they finish the handshake).
+		/// </summary>
+		private static readonly HashSet<PacketTypes> NecessaryPackets = new()
+		{
+			PacketTypes.ContinueConnecting,
+			PacketTypes.WorldInfo,
+			PacketTypes.Status,
+			PacketTypes.Disconnect,
+			PacketTypes.TileFrameSection,
+			PacketTypes.TileSendSection,
+			PacketTypes.PlayerSpawnSelf
+		};
 
 		/// <summary>
 		/// Determines if an outgoing packet is necessary to send to a player before they have finished the connection handshake.
 		/// </summary>
 		/// <param name="msgType">The packet type to check against the necessary list.</param>
-		/// <returns></returns>
-		private bool NecessaryPacket(PacketTypes msgType)
-		{
-			List<PacketTypes> ConnectionPackets = new List<PacketTypes>()
-			{
-				PacketTypes.ContinueConnecting,
-				PacketTypes.WorldInfo,
-				PacketTypes.Status,
-				PacketTypes.Disconnect,
-				PacketTypes.TileFrameSection,
-				PacketTypes.TileSendSection,
-				PacketTypes.PlayerSpawnSelf
-			};
-
-			return ConnectionPackets.Contains(msgType);
-		}
+		/// <returns>Whether the packet is necessary for connection or not</returns>
+		private bool NecessaryPacket(PacketTypes msgType) => NecessaryPackets.Contains(msgType);
 
 		//Todo: Separate this into a few functions. SendTo, SendToAll, etc
 		/// <summary>
