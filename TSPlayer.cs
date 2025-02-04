@@ -65,44 +65,44 @@ namespace TShockAPI
 	/// <summary>
 	/// An enum based on the current client's connection state to the server.
 	/// </summary>
-	public enum ClientState : int
+	public enum ConnectionState : int
 	{
 		/// <summary>
-		/// The server has accepted the client's connection but now requires a password from them before they can continue. (Only for password protected servers)
+		/// The server is password protected and the connection is pending until a password is sent by the client.
 		/// </summary>
-		RequiresPassword = -1,
+		AwaitingPassword = -1,
 		/// <summary>
-		/// The server has accepted the client's connection. In this state, they will send their current version string to the server.
+		/// The connection has been established, and the client must verify its version.
 		/// </summary>
-		ClientConnecting = 0,
+		AwaitingVersionCheck = 0,
 		/// <summary>
-		/// The server has accepted the client's password to connect and/or the server has verified the client's version string as being correct. In this state, the server will send them their user slot and in return, they must send their player information.
+		/// The server has accepted the client's password to connect and/or the server has verified the client's version string as being correct. The client is now being assigned a player slot.
 		/// </summary>
-		ClientReceivingPlayerSlot = 1,
+		AssigningPlayerSlot = 1,
 		/// <summary>
-		/// The client has sent their player information. In this state, they must request world data.
+		/// The player slot has been received by the client, and the server is now waiting for the player information.
 		/// </summary>
-		ClientSentPlayerInformation = 2,
+		AwaitingPlayerInfo = 2,
 		/// <summary>
-		/// The client has requested the world data.
+		/// Player information has been received, and the client is requesting world data.
 		/// </summary>
-		ClientRequestedWorldData = 3,
+		RequestingWorldData = 3,
 		/// <summary>
-		/// The client has received the world data.
+		/// The world data is being sent to the client.
 		/// </summary>
-		ClientReceivedWorldData = 4,
+		ReceivingWorldData = 4,
 		/// <summary>
-		/// The client has loaded the world data and map.
+		/// The world data has been received, and the client is now finalizing the load.
 		/// </summary>
-		ClientLoadedWorldData = 5,
+		FinalizingWorldLoad = 5,
 		/// <summary>
 		/// The client is requesting tile data.
 		/// </summary>
-		ClientRequestingTileData = 6,
+		RequestingTileData = 6,
 		/// <summary>
-		/// The client has sent a SpawnPlayer packet and has finished the connection process.
+		/// The connection process is complete (The player has spawned), and the client has fully joined the game.
 		/// </summary>
-		ClientSpawned = 10
+		Complete = 10
 	}
 
 	public class TSPlayer
@@ -2186,7 +2186,7 @@ namespace TShockAPI
 			if (!NecessaryPacket(msgType) && !FinishedHandshake)
 				return;
 
-			if (msgType == PacketTypes.WorldInfo && State < (int)ClientState.ClientRequestedWorldData)
+			if (msgType == PacketTypes.WorldInfo && State < (int)ConnectionState.RequestingWorldData)
 				return;
 
 			NetMessage.SendData((int)msgType, Index, -1, text == null ? null : NetworkText.FromLiteral(text), number, number2, number3, number4, number5);

@@ -2628,8 +2628,8 @@ namespace TShockAPI
 			{
 				if (account.UUID == args.Player.UUID)
 				{
-					if (args.Player.State == (int)ClientState.ClientReceivingPlayerSlot)
-						args.Player.State = (int)ClientState.ClientSentPlayerInformation;
+					if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+						args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
 
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 
@@ -2688,8 +2688,8 @@ namespace TShockAPI
 				return true;
 			}
 
-			if (args.Player.State == (int)ClientState.ClientReceivingPlayerSlot)
-				args.Player.State = 2;
+			if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+				args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
 
 			NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 			return true;
@@ -2728,7 +2728,7 @@ namespace TShockAPI
 			short numberOfDeathsPVP = args.Data.ReadInt16();
 			PlayerSpawnContext context = (PlayerSpawnContext)args.Data.ReadByte();
 
-			if (args.Player.State >= (int)ClientState.ClientRequestedWorldData && !args.Player.FinishedHandshake)
+			if (args.Player.State >= (int)ConnectionState.RequestingWorldData && !args.Player.FinishedHandshake)
 				args.Player.FinishedHandshake = true; //If the player has requested world data before sending spawn player, they should be at the obvious ClientRequestedWorldData state. Also only set this once to remove redundant updates.
 
 			if (OnPlayerSpawn(args.Player, args.Data, player, spawnx, spawny, respawnTimer, numberOfDeathsPVE, numberOfDeathsPVP, context))
@@ -3221,8 +3221,8 @@ namespace TShockAPI
 					args.Player.RequiresPassword = false;
 					args.Player.PlayerData = TShock.CharacterDB.GetPlayerData(args.Player, account.ID);
 
-					if (args.Player.State == (int)ClientState.ClientReceivingPlayerSlot)
-						args.Player.State = (int)ClientState.ClientSentPlayerInformation;
+					if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+						args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
 
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 
@@ -3271,8 +3271,8 @@ namespace TShockAPI
 				{
 					args.Player.RequiresPassword = false;
 
-					if (args.Player.State == (int)ClientState.ClientReceivingPlayerSlot)
-						args.Player.State = (int)ClientState.ClientSentPlayerInformation;
+					if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+						args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
 
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 					return true;

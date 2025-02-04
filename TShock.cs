@@ -1440,7 +1440,7 @@ namespace TShockAPI
 
 			if (tsplr.ReceivedInfo)
 			{
-				if (!tsplr.SilentKickInProgress && tsplr.State >= (int)ClientState.ClientRequestedWorldData && tsplr.FinishedHandshake) //The player has left, do not broadcast any clients exploiting the behaviour of not spawning their player.
+				if (!tsplr.SilentKickInProgress && tsplr.State >= (int)ConnectionState.RequestingWorldData && tsplr.FinishedHandshake) //The player has left, do not broadcast any clients exploiting the behaviour of not spawning their player.
 					Utils.Broadcast(GetString("{0} has left.", tsplr.Name), Color.Yellow);
 				Log.Info(GetString("{0} disconnected.", tsplr.Name));
 
@@ -1678,7 +1678,7 @@ namespace TShockAPI
 				return;
 			}
 
-			if ((player.State < (int)ClientState.ClientSpawned || player.Dead) && (int)type > 12 && (int)type != 16 && (int)type != 42 && (int)type != 50 &&
+			if ((player.State < (int)ConnectionState.Complete || player.Dead) && (int)type > 12 && (int)type != 16 && (int)type != 42 && (int)type != 50 &&
 				(int)type != 38 && (int)type != 21 && (int)type != 22 && type != PacketTypes.SyncLoadout)
 			{
 				e.Handled = true;

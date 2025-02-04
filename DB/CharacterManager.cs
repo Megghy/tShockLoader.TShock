@@ -189,7 +189,7 @@ namespace TShockAPI.DB
 			if (!player.IsLoggedIn)
 				return false;
 
-			if (player.State < (int)ClientState.ClientSpawned)
+			if (player.State < (int)ConnectionState.Complete)
 				return false;
 
 			if (player.HasPermission(Permissions.bypassssc) && !fromCommand)
