@@ -1607,7 +1607,7 @@ namespace TShockAPI
 					}
 				}
 
-				if (banUuid)
+				if (banUuid && player.UUID.Length > 0)
 				{
 					banResult = DoBan($"{Identifier.UUID}{player.UUID}", reason, expiration);
 				}
