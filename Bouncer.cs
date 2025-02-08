@@ -504,6 +504,14 @@ namespace TShockAPI
 				return;
 			}
 
+			if (!float.IsFinite(pos.X) || !float.IsFinite(pos.Y))
+			{
+				TShock.Log.ConsoleInfo(GetString("Bouncer / OnPlayerUpdate force kicked (attempted to set position to infinity or NaN) from {0}", args.Player.Name));
+				args.Player.Kick(GetString("Detected DOOM set to ON position."), true, true);
+				args.Handled = true;
+				return;
+			}
+
 			if (pos.X < 0 || pos.Y < 0 || pos.X >= Main.maxTilesX * 16 - 16 || pos.Y >= Main.maxTilesY * 16 - 16)
 			{
 				TShock.Log.ConsoleDebug(GetString("Bouncer / OnPlayerUpdate rejected from (position check) {0}", args.Player.Name));
@@ -1072,6 +1080,22 @@ namespace TShockAPI
 			bool noDelay = args.NoDelay;
 			short type = args.Type;
 
+			if (!float.IsFinite(pos.X) || !float.IsFinite(pos.Y))
+			{
+				TShock.Log.ConsoleInfo(GetString("Bouncer / OnItemDrop force kicked (attempted to set position to infinity or NaN) from {0}", args.Player.Name));
+				args.Player.Kick(GetString("Detected DOOM set to ON position."), true, true);
+				args.Handled = true;
+				return;
+			}
+
+			if (!float.IsFinite(vel.X) || !float.IsFinite(vel.Y))
+			{
+				TShock.Log.ConsoleInfo(GetString("Bouncer / OnItemDrop force kicked (attempted to set velocity to infinity or NaN) from {0}", args.Player.Name));
+				args.Player.Kick(GetString("Detected DOOM set to ON position."), true, true);
+				args.Handled = true;
+				return;
+			}
+
 			// player is attempting to crash clients
 			if (type < -48 || type >= Terraria.ID.ItemID.Count)
 			{
@@ -1174,6 +1198,22 @@ namespace TShockAPI
 			short type = args.Type;
 			int index = args.Index;
 			float[] ai = args.Ai;
+
+			if (!float.IsFinite(pos.X) || !float.IsFinite(pos.Y))
+			{
+				TShock.Log.ConsoleInfo(GetString("Bouncer / OnNewProjectile force kicked (attempted to set position to infinity or NaN) from {0}", args.Player.Name));
+				args.Player.Kick(GetString("Detected DOOM set to ON position."), true, true);
+				args.Handled = true;
+				return;
+			}
+
+			if (!float.IsFinite(vel.X) || !float.IsFinite(vel.Y))
+			{
+				TShock.Log.ConsoleInfo(GetString("Bouncer / OnNewProjectile force kicked (attempted to set velocity to infinity or NaN) from {0}", args.Player.Name));
+				args.Player.Kick(GetString("Detected DOOM set to ON position."), true, true);
+				args.Handled = true;
+				return;
+			}
 
 			if (index > Main.maxProjectiles)
 			{
