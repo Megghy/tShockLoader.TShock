@@ -35,6 +35,7 @@ using TShockAPI.Net;
 using Timer = System.Timers.Timer;
 using System.Linq;
 using Terraria.GameContent.Creative;
+using SteelSeries.GameSense;
 
 namespace TShockAPI
 {
@@ -1367,6 +1368,9 @@ namespace TShockAPI
 			FakePlayer = new Player { name = playerName, whoAmI = -1 };
 			Group = Group.DefaultGroup;
 			AwaitingResponse = new Dictionary<string, Action<object>>();
+
+			if (playerName == "All" || playerName == "Server")
+				FinishedHandshake = true; //Hot fix for the all player object not getting packets like TimeSet, etc because they have no state and finished handshake will always be false.
 		}
 
 		/// <summary>
@@ -2186,7 +2190,7 @@ namespace TShockAPI
 			if (!NecessaryPacket(msgType) && !FinishedHandshake)
 				return;
 
-			if (msgType == PacketTypes.WorldInfo && State < (int)ConnectionState.RequestingWorldData)
+			if (FakePlayer != null && FakePlayer.whoAmI != -1 && msgType == PacketTypes.WorldInfo && State < (int)ConnectionState.RequestingWorldData) //So.. the All player doesn't have a state, so we cannot check this, skip over them if their index is -1 (server/all)
 				return;
 
 			NetMessage.SendData((int)msgType, Index, -1, text == null ? null : NetworkText.FromLiteral(text), number, number2, number3, number4, number5);
