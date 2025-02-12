@@ -3648,10 +3648,15 @@ namespace TShockAPI
 					thing = GetString("{0} summoned the {1}!", args.Player.Name, npc.FullName);
 					break;
 			}
-			if (TShock.Config.Settings.AnonymousBossInvasions)
-				TShock.Utils.SendLogs(thing, Color.PaleVioletRed, args.Player);
-			else
-				TShock.Utils.Broadcast(thing, 175, 75, 255);
+
+			if (NPCID.Sets.MPAllowedEnemies[thingType])
+			{
+				if (TShock.Config.Settings.AnonymousBossInvasions)
+					TShock.Utils.SendLogs(thing, Color.PaleVioletRed, args.Player);
+				else
+					TShock.Utils.Broadcast(thing, 175, 75, 255);
+			}
+
 			return false;
 		}
 
