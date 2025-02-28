@@ -327,7 +327,7 @@ namespace TShockAPI.Handlers
 
 			private bool MatchRemoval(TSPlayer player, TileRect rect)
 			{
-				for (int x = rect.X; x < rect.Y + rect.Width; x++)
+				for (int x = rect.X; x < rect.X + rect.Width; x++)
 				{
 					for (int y = rect.Y; y < rect.Y + rect.Height; y++)
 					{
@@ -910,7 +910,7 @@ namespace TShockAPI.Handlers
 			}
 		}
 
-		/* 
+		/*
 		 * This is a copy of the `WorldGen.Convert` method with the following precise changes:
 		 *  - Added a `MockTile tile` parameter
 		 *  - Changed the `i` and `j` parameters to `k` and `l`
@@ -921,7 +921,7 @@ namespace TShockAPI.Handlers
 		 *  - Removed the ifs checking the bounds of the tile and wall types
 		 *  - Removed branches that would call `WorldGen.KillTile`
 		 *  - Changed branches depending on randomness to instead set the property to both values after one another
-		 * 
+		 *
 		 * This overall leads to a method that can be called on a MockTile and real-world coordinates and will spit out the proper conversion changes into the MockTile.
 		 */
 
