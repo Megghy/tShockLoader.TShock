@@ -35,7 +35,6 @@ using TShockAPI.Net;
 using Timer = System.Timers.Timer;
 using System.Linq;
 using Terraria.GameContent.Creative;
-using SteelSeries.GameSense;
 
 namespace TShockAPI
 {
