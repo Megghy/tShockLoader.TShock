@@ -95,6 +95,7 @@ namespace TShockAPI
 					{ PacketTypes.TileSendSquare, HandleSendTileRect },
 					{ PacketTypes.ItemDrop, HandleItemDrop },
 					{ PacketTypes.ItemOwner, HandleItemOwner },
+					{ PacketTypes.NpcItemStrike, HandleNpcItemStrike },
 					{ PacketTypes.ProjectileNew, HandleProjectileNew },
 					{ PacketTypes.NpcStrike, HandleNpcStrike },
 					{ PacketTypes.ProjectileDestroy, HandleProjectileKill },
@@ -2943,6 +2944,13 @@ namespace TShockAPI
 			}
 
 			return false;
+		}
+
+		private static bool HandleNpcItemStrike(GetDataHandlerArgs args)
+		{
+			// Never sent by vanilla client, ignore this
+			TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleNpcItemStrike surprise packet! Someone tell the TShock team! {0}", args.Player.Name));
+			return true;
 		}
 
 		private static bool HandleProjectileNew(GetDataHandlerArgs args)
