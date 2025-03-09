@@ -3492,15 +3492,23 @@ namespace TShockAPI
 			if (OnNPCSpecial(args.Player, args.Data, id, type))
 				return true;
 
-			if (type == 1 && TShock.Config.Settings.DisableDungeonGuardian)
+			if (type == 1)
 			{
-				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpecial rejected type 1 for {0}", args.Player.Name));
-				args.Player.SendMessage(GetString("The Dungeon Guardian returned you to your spawn point."), Color.Purple);
-				args.Player.Spawn(PlayerSpawnContext.RecallFromItem);
-				return true;
-			}
+				if (!args.Player.HasPermission(Permissions.summonboss))
+				{
+					args.Player.SendErrorMessage(GetString("You do not have permission to summon the Skeletron."));
+					TShock.Log.ConsoleDebug(GetString($"GetDataHandlers / HandleNpcStrike rejected Skeletron summon from {args.Player.Name}"));
+					return true;
+				}
 
-			if (type == 3)
+				return false;
+			}
+			else if (type == 2)
+			{
+				// Plays SoundID.Item1
+				return false;
+			}
+			else if (type == 3)
 			{
 				if (!args.Player.HasPermission(Permissions.usesundial))
 				{
@@ -3519,6 +3527,42 @@ namespace TShockAPI
 						args.Player.SendErrorMessage(GetString("You must set ForceTime to normal via config to use the Enchanted Sundial."));
 					return true;
 				}
+			}
+			else if (type == 4)
+			{
+				// Big Mimic Spawn Smoke
+				return false;
+			}
+			else if (type == 5)
+			{
+				// Register Kill for Torch God in Bestiary
+				return false;
+			}
+			else if (type == 6)
+			{
+				if (!args.Player.HasPermission(Permissions.usemoondial))
+				{
+					TShock.Log.ConsoleDebug(GetString($"GetDataHandlers / HandleSpecial rejected enchanted moondial permission {args.Player.Name}"));
+					args.Player.SendErrorMessage(GetString("You do not have permission to use the Enchanted Moondial."));
+					return true;
+				}
+				else if (TShock.Config.Settings.ForceTime != "normal")
+				{
+					TShock.Log.ConsoleDebug(GetString($"GetDataHandlers / HandleSpecial rejected enchanted moondial permission (ForceTime) {args.Player.Name}"));
+					if (!args.Player.HasPermission(Permissions.cfgreload))
+					{
+						args.Player.SendErrorMessage(GetString("You cannot use the Enchanted Moondial because time is stopped."));
+					}
+					else
+						args.Player.SendErrorMessage(GetString("You must set ForceTime to normal via config to use the Enchanted Moondial."));
+					return true;
+				}
+			}
+			else if (!args.Player.HasPermission($"tshock.specialeffects.{type}"))
+			{
+				args.Player.SendErrorMessage(GetString("You do not have permission to use this effect."));
+				TShock.Log.ConsoleError(GetString("Unrecognized special effect (Packet 51). Please report this to the TShock developers."));
+				return true;
 			}
 
 			return false;
