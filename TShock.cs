@@ -63,7 +63,7 @@ namespace TShockAPI
 		/// <summary>VersionNum - The version number the TerrariaAPI will return back to the API. We just use the Assembly info.</summary>
 		public static readonly Version VersionNum = Assembly.GetExecutingAssembly().GetName().Version;
 		/// <summary>VersionCodename - The version codename is displayed when the server starts. Inspired by software codenames conventions.</summary>
-		public static readonly string VersionCodename = "Intensity";
+		public static readonly string VersionCodename = "East";
 
 		/// <summary>SavePath - This is the path TShock saves its data in. This path is relative to the TerrariaServer.exe (not in ServerPlugins).</summary>
 		public static string SavePath = "tshock";
@@ -428,6 +428,8 @@ namespace TShockAPI
 				Hooks.AccountHooks.AccountDelete += OnAccountDelete;
 				Hooks.AccountHooks.AccountCreate += OnAccountCreate;
 
+				On.Terraria.RemoteClient.Reset += RemoteClient_Reset;
+
 				GetDataHandlers.InitGetDataHandler();
 				Commands.InitCommands();
 
@@ -494,6 +496,12 @@ namespace TShockAPI
 				SafeError(ex.ToString());
 				Environment.Exit(1);
 			}
+		}
+
+		private static void RemoteClient_Reset(On.Terraria.RemoteClient.orig_Reset orig, RemoteClient client)
+		{
+			client.ClientUUID = null;
+			orig(client);
 		}
 
 		private static void OnAchievementInitializerLoad(ILContext il)
@@ -1174,16 +1182,16 @@ namespace TShockAPI
 					if (player.RecentFuse > 0)
 						player.RecentFuse--;
 
-					if ((Main.ServerSideCharacter) && (player.TPlayer.SpawnX > 0) && (player.sX != player.TPlayer.SpawnX))
+					if (Main.ServerSideCharacter && player.initialSpawn)
 					{
-						player.sX = player.TPlayer.SpawnX;
-						player.sY = player.TPlayer.SpawnY;
-					}
+						player.initialSpawn = false;
 
-					if ((Main.ServerSideCharacter) && (player.sX > 0) && (player.sY > 0) && (player.TPlayer.SpawnX < 0))
-					{
-						player.TPlayer.SpawnX = player.sX;
-						player.TPlayer.SpawnY = player.sY;
+						// reassert the correct spawnpoint value after the game's Spawn handler changed it
+						player.TPlayer.SpawnX = player.initialServerSpawnX;
+						player.TPlayer.SpawnY = player.initialServerSpawnY;
+
+						player.TeleportSpawnpoint();
+						TShock.Log.ConsoleDebug(GetString("OnSecondUpdate / initial ssc spawn for {0} at ({1}, {2})", player.Name, player.TPlayer.SpawnX, player.TPlayer.SpawnY));
 					}
 
 					if (player.RPPending > 0)
@@ -1368,6 +1376,8 @@ namespace TShockAPI
 					}
 				}
 			}
+
+			Bans.CheckBan(player);
 			Players[args.Who] = player;
 		}
 
@@ -1389,7 +1399,8 @@ namespace TShockAPI
 				return;
 			}
 
-			Bans.CheckBan(player);
+			if (Bans.CheckBan(player))
+				return;
 		}
 
 		/// <summary>OnLeave - Called when a player leaves the server.</summary>
@@ -1429,7 +1440,7 @@ namespace TShockAPI
 
 			if (tsplr.ReceivedInfo)
 			{
-				if (!tsplr.SilentKickInProgress && tsplr.State >= 3)
+				if (!tsplr.SilentKickInProgress && tsplr.State >= 3 && tsplr.FinishedHandshake) //The player has left, do not broadcast any clients exploiting the behaviour of not spawning their player.
 					Utils.Broadcast(GetString("{0} has left.", tsplr.Name), Color.Yellow);
 				Log.Info(GetString("{0} disconnected.", tsplr.Name));
 
@@ -1449,6 +1460,9 @@ namespace TShockAPI
 					tsplr.tempGroupTimer.Stop();
 				}
 			}
+
+			
+			tsplr.FinishedHandshake = false;
 
 			// Fire the OnPlayerLogout hook too, if the player was logged in and they have a TSPlayer object.
 			if (tsplr.IsLoggedIn)
@@ -1479,6 +1493,12 @@ namespace TShockAPI
 				return;
 			}
 
+			if (!tsplr.FinishedHandshake)
+			{
+				args.Handled = true;
+				return;
+			}
+
 			if (args.Text.Length > 500)
 			{
 				tsplr.Kick(GetString("Crash attempt via long chat packet."), true);
@@ -1497,11 +1517,11 @@ namespace TShockAPI
 				{
 					if (!String.IsNullOrEmpty(text))
 					{
-						text = item.Key.Value + ' ' + text;
+						text = EnglishLanguage.GetCommandPrefixByName(item.Value._name) + ' ' + text;
 					}
 					else
 					{
-						text = item.Key.Value;
+						text = EnglishLanguage.GetCommandPrefixByName(item.Value._name);
 					}
 					break;
 				}
@@ -1695,14 +1715,14 @@ namespace TShockAPI
 				Log.Info(GetString("{0} ({1}) from '{2}' group from '{3}' joined. ({4}/{5})", player.Name, player.IP,
 									   player.Group.Name, player.Country, TShock.Utils.GetActivePlayerCount(),
 									   TShock.Config.Settings.MaxSlots));
-				if (!player.SilentJoinInProgress)
+				if (!player.SilentJoinInProgress && player.FinishedHandshake)
 					Utils.Broadcast(GetString("{0} ({1}) has joined.", player.Name, player.Country), Color.Yellow);
 			}
 			else
 			{
 				Log.Info(GetString("{0} ({1}) from '{2}' group joined. ({3}/{4})", player.Name, player.IP,
 									   player.Group.Name, TShock.Utils.GetActivePlayerCount(), TShock.Config.Settings.MaxSlots));
-				if (!player.SilentJoinInProgress)
+				if (!player.SilentJoinInProgress && player.FinishedHandshake)
 					Utils.Broadcast(GetString("{0} has joined.", player.Name), Color.Yellow);
 			}
 
