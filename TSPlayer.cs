@@ -35,7 +35,6 @@ using TShockAPI.Net;
 using Timer = System.Timers.Timer;
 using System.Linq;
 using Terraria.GameContent.Creative;
-
 namespace TShockAPI
 {
 	/// <summary>
@@ -60,6 +59,49 @@ namespace TShockAPI
 		/// Equivalent to WriteToConsole | WriteToLog
 		/// </summary>
 		WriteToLogAndConsole
+	}
+
+	/// <summary>
+	/// An enum based on the current client's connection state to the server.
+	/// </summary>
+	public enum ConnectionState : int
+	{
+		/// <summary>
+		/// The server is password protected and the connection is pending until a password is sent by the client.
+		/// </summary>
+		AwaitingPassword = -1,
+		/// <summary>
+		/// The connection has been established, and the client must verify its version.
+		/// </summary>
+		AwaitingVersionCheck = 0,
+		/// <summary>
+		/// The server has accepted the client's password to connect and/or the server has verified the client's version string as being correct. The client is now being assigned a player slot.
+		/// </summary>
+		AssigningPlayerSlot = 1,
+		/// <summary>
+		/// The player slot has been received by the client, and the server is now waiting for the player information.
+		/// </summary>
+		AwaitingPlayerInfo = 2,
+		/// <summary>
+		/// Player information has been received, and the client is requesting world data.
+		/// </summary>
+		RequestingWorldData = 3,
+		/// <summary>
+		/// The world data is being sent to the client.
+		/// </summary>
+		ReceivingWorldData = 4,
+		/// <summary>
+		/// The world data has been received, and the client is now finalizing the load.
+		/// </summary>
+		FinalizingWorldLoad = 5,
+		/// <summary>
+		/// The client is requesting tile data.
+		/// </summary>
+		RequestingTileData = 6,
+		/// <summary>
+		/// The connection process is complete (The player has spawned), and the client has fully joined the game.
+		/// </summary>
+		Complete = 10
 	}
 
 	public class TSPlayer
@@ -1329,6 +1371,9 @@ namespace TShockAPI
 			FakePlayer = new Player { name = playerName, whoAmI = -1 };
 			Group = Group.DefaultGroup;
 			AwaitingResponse = new Dictionary<string, Action<object>>();
+
+			if (playerName == "All" || playerName == "Server")
+				FinishedHandshake = true; //Hot fix for the all player object not getting packets like TimeSet, etc because they have no state and finished handshake will always be false.
 		}
 
 		/// <summary>
@@ -2119,6 +2164,27 @@ namespace TShockAPI
 			SendData(PacketTypes.PlayerAddBuff, number: Index, number2: type, number3: time);
 		}
 
+		/// <summary>
+		/// The list of necessary packets to make sure gets through to the player upon connection (before they finish the handshake).
+		/// </summary>
+		private static readonly HashSet<PacketTypes> HandshakeNecessaryPackets = new()
+		{
+			PacketTypes.ContinueConnecting,
+			PacketTypes.WorldInfo,
+			PacketTypes.Status,
+			PacketTypes.Disconnect,
+			PacketTypes.TileFrameSection,
+			PacketTypes.TileSendSection,
+			PacketTypes.PlayerSpawnSelf
+		};
+
+		/// <summary>
+		/// Determines if an outgoing packet is necessary to send to a player before they have finished the connection handshake.
+		/// </summary>
+		/// <param name="msgType">The packet type to check against the necessary list.</param>
+		/// <returns>Whether the packet is necessary for connection or not</returns>
+		private bool NecessaryPacket(PacketTypes msgType) => HandshakeNecessaryPackets.Contains(msgType);
+
 		//Todo: Separate this into a few functions. SendTo, SendToAll, etc
 		/// <summary>
 		/// Sends data to the player.
@@ -2134,6 +2200,12 @@ namespace TShockAPI
 			float number3 = 0f, float number4 = 0f, int number5 = 0)
 		{
 			if (RealPlayer && !ConnectionAlive)
+				return;
+
+			if (!NecessaryPacket(msgType) && !FinishedHandshake)
+				return;
+
+			if (FakePlayer != null && FakePlayer.whoAmI != -1 && msgType == PacketTypes.WorldInfo && State < (int)ConnectionState.RequestingWorldData) //So.. the All player doesn't have a state, so we cannot check this, skip over them if their index is -1 (server/all)
 				return;
 
 			NetMessage.SendData((int)msgType, Index, -1, text == null ? null : NetworkText.FromLiteral(text), number, number2, number3, number4, number5);

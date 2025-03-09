@@ -189,10 +189,14 @@ namespace TShockAPI.DB
 		{
 			List<string> identifiers = new List<string>
 			{
-				$"{Identifier.UUID}{player.UUID}",
 				$"{Identifier.Name}{player.Name}",
 				$"{Identifier.IP}{player.IP}"
 			};
+
+			if (player.UUID != null && player.UUID.Length > 0)
+			{
+				identifiers.Add($"{Identifier.UUID}{player.UUID}");
+			}
 
 			if (player.Account != null)
 			{

@@ -2619,7 +2619,7 @@ namespace TShockAPI
 
 		private static bool HandleConnecting(GetDataHandlerArgs args)
 		{
-			var account = TShock.UserAccounts.GetUserAccountByName(args.Player.Name);//
+			var account = TShock.UserAccounts.GetUserAccountByName(args.Player.Name);
 			args.Player.DataWhenJoined = new PlayerData(false);
 			args.Player.DataWhenJoined.CopyCharacter(args.Player);
 			args.Player.PlayerData = new PlayerData(false);
@@ -2629,8 +2629,9 @@ namespace TShockAPI
 			{
 				if (account.UUID == args.Player.UUID)
 				{
-					if (args.Player.State == 1)
-						args.Player.State = 2;
+					if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+						args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
+
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 
 					var group = TShock.Groups.GetGroupByName(account.Group);
@@ -2688,8 +2689,9 @@ namespace TShockAPI
 				return true;
 			}
 
-			if (args.Player.State == 1)
-				args.Player.State = 2;
+			if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+				args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
+
 			NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 			return true;
 		}
@@ -2727,7 +2729,8 @@ namespace TShockAPI
 			short numberOfDeathsPVP = args.Data.ReadInt16();
 			PlayerSpawnContext context = (PlayerSpawnContext)args.Data.ReadByte();
 
-			args.Player.FinishedHandshake = true;
+			if (args.Player.State >= (int)ConnectionState.RequestingWorldData && !args.Player.FinishedHandshake)
+				args.Player.FinishedHandshake = true; //If the player has requested world data before sending spawn player, they should be at the obvious ClientRequestedWorldData state. Also only set this once to remove redundant updates.
 
 			if (OnPlayerSpawn(args.Player, args.Data, player, spawnX, spawnY, respawnTimer, numberOfDeathsPVE, numberOfDeathsPVP, context))
 				return true;
@@ -3245,8 +3248,9 @@ namespace TShockAPI
 					args.Player.RequiresPassword = false;
 					args.Player.PlayerData = TShock.CharacterDB.GetPlayerData(args.Player, account.ID);
 
-					if (args.Player.State == 1)
-						args.Player.State = 2;
+					if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+						args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
+
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 
 					var group = TShock.Groups.GetGroupByName(account.Group);
@@ -3293,8 +3297,10 @@ namespace TShockAPI
 				if (TShock.Config.Settings.ServerPassword == password)
 				{
 					args.Player.RequiresPassword = false;
-					if (args.Player.State == 1)
-						args.Player.State = 2;
+
+					if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+						args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
+
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 					return true;
 				}
@@ -3462,9 +3468,9 @@ namespace TShockAPI
 				if (buff == 10 && TShock.Config.Settings.DisableInvisPvP && args.TPlayer.hostile)
 					buff = 0;
 
-				if (Netplay.Clients[args.TPlayer.whoAmI].State < 2 && (buff == 156 || buff == 47 || buff == 149))
+				if (Netplay.Clients[args.TPlayer.whoAmI].State < (int)ConnectionState.AwaitingPlayerInfo && (buff == 156 || buff == 47 || buff == 149))
 				{
-					TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandlePlayerBuffList zeroed player buff due to below state 2 {0} {1}", args.Player.Name, buff));
+					TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandlePlayerBuffList zeroed player buff due to below state awaiting player information {0} {1}", args.Player.Name, buff));
 					buff = 0;
 				}
 
@@ -3713,10 +3719,15 @@ namespace TShockAPI
 					thing = GetString("{0} summoned the {1}!", args.Player.Name, npc.FullName);
 					break;
 			}
-			if (TShock.Config.Settings.AnonymousBossInvasions)
-				TShock.Utils.SendLogs(thing, Color.PaleVioletRed, args.Player);
-			else
-				TShock.Utils.Broadcast(thing, 175, 75, 255);
+
+			if (NPCID.Sets.MPAllowedEnemies[thingType])
+			{
+				if (TShock.Config.Settings.AnonymousBossInvasions)
+					TShock.Utils.SendLogs(thing, Color.PaleVioletRed, args.Player);
+				else
+					TShock.Utils.Broadcast(thing, 175, 75, 255);
+			}
+
 			return false;
 		}
 

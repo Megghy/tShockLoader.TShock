@@ -1607,7 +1607,7 @@ namespace TShockAPI
 					}
 				}
 
-				if (banUuid)
+				if (banUuid && player.UUID.Length > 0)
 				{
 					banResult = DoBan($"{Identifier.UUID}{player.UUID}", reason, expiration);
 				}
@@ -2531,7 +2531,7 @@ namespace TShockAPI
 					foreach (TSPlayer ply in TShock.Players.Where(p => p != null && p.Active && p.TPlayer.name.ToLower().Equals(args.Parameters[0].ToLower())))
 					{
 						//this will always tell the client that they have not done the quest today.
-						ply.SendData((PacketTypes)74, "");
+						ply.SendData(PacketTypes.AnglerQuest, "");
 					}
 					args.Player.SendSuccessMessage(GetString("Removed {0} players from the angler quest completion list for today.", result));
 				}
