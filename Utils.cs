@@ -172,7 +172,7 @@ namespace TShockAPI
 			foreach (TSPlayer player in TShock.Players)
 			{
 				if (player != null && player != excludedPlayer && player.Active && player.HasPermission(Permissions.logs) &&
-						player.DisplayLogs && TShock.Config.Settings.DisableSpewLogs == false)
+						player.DisplayLogs && !TShock.Config.Settings.DisableSpewLogs)
 					player.SendMessage(log, color);
 			}
 		}
@@ -183,7 +183,7 @@ namespace TShockAPI
 		/// <returns>The number of active players on the server.</returns>
 		public int GetActivePlayerCount()
 		{
-			return Main.player.Where(p => null != p && p.active).Count();
+			return TShock.Players.Count(p => null != p && p.Active && p.FinishedHandshake);
 		}
 
 		//Random should not be generated in a method
@@ -330,7 +330,7 @@ namespace TShockAPI
 		/// <returns>The item represented by the tag.</returns>
 		public Item GetItemFromTag(string tag)
 		{
-			Regex regex = new Regex(@"\[i(tem)?(?:\/s(?<Stack>\d{1,3}))?(?:\/p(?<Prefix>\d{1,3}))?:(?<NetID>-?\d{1,4})\]");
+			Regex regex = new Regex(@"\[i(tem)?(?:\/s(?<Stack>\d{1,4}))?(?:\/p(?<Prefix>\d{1,3}))?:(?<NetID>-?\d{1,4})\]");
 			Match match = regex.Match(tag);
 			if (!match.Success)
 				return null;
@@ -1149,11 +1149,15 @@ namespace TShockAPI
 		/// <param name="empty">If the server is empty; determines if we should use Utils.GetActivePlayerCount() for player count or 0.</param>
 		internal void SetConsoleTitle(bool empty)
 		{
+			if (ShouldSkipTitle)
+				return;
 			Console.Title = GetString("{0}{1}/{2} on {3} @ {4}:{5} (TShock for Terraria v{6})",
 					!string.IsNullOrWhiteSpace(TShock.Config.Settings.ServerName) ? TShock.Config.Settings.ServerName + " - " : "",
 					empty ? 0 : GetActivePlayerCount(),
 					TShock.Config.Settings.MaxSlots, Main.worldName, Netplay.ServerIP.ToString(), Netplay.ListenPort, TShock.VersionNum);
 		}
+		// Some terminals doesn't supports XTerm escape sequences for setting the title
+		private static bool ShouldSkipTitle = !System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) && !(Environment.GetEnvironmentVariable("TERM")?.Contains("xterm") ?? false);
 
 		/// <summary>Determines the distance between two vectors.</summary>
 		/// <param name="value1">The first vector location.</param>

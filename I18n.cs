@@ -60,6 +60,12 @@ namespace TShockAPI
 					}
 				}
 
+				if (LanguageManager.Instance.ActiveCulture == GameCulture.DefaultCulture)
+				{
+					var bf = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+					// LanguageManager.SetLanguage will change this so we need to reset it back to null
+					typeof(CultureInfo).GetField("s_currentThreadUICulture", bf)?.SetValue(null, null);
+				}
 				return CultureInfo.CurrentUICulture;
 			}
 		}
