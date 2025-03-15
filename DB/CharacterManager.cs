@@ -79,7 +79,7 @@ namespace TShockAPI.DB
 
 		public PlayerData GetPlayerData(TSPlayer player, int acctid)
 		{
-			PlayerData playerData = new PlayerData(false);
+			PlayerData playerData = new PlayerData(true);
 
 			try
 			{

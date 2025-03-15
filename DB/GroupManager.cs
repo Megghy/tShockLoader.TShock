@@ -74,6 +74,7 @@ namespace TShockAPI.DB
 						Permissions.canchangepassword,
 						Permissions.canlogout,
 						Permissions.summonboss,
+						Permissions.worldupgrades,
 						Permissions.whisper,
 						Permissions.wormhole,
 						Permissions.canpaint,

@@ -346,8 +346,12 @@ namespace TShockAPI
 		[Description("User can change the homes of NPCs.")]
 		public static readonly string movenpc = "tshock.world.movenpc";
 
+		[Obsolete("Feature no longer available.")]
 		[Description("User can convert hallow into corruption and vice-versa.")]
 		public static readonly string converthardmode = "tshock.world.converthardmode";
+
+		[Description("User can use world-based permanent boosters like Advanced Combat Techniques")]
+		public static readonly string worldupgrades = "tshock.world.worldupgrades";
 
 		[Description("User can force the server to Halloween mode.")]
 		public static readonly string halloween = "tshock.world.sethalloween";

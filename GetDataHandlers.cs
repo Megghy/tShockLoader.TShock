@@ -3619,8 +3619,9 @@ namespace TShockAPI
 			return false;
 		}
 
-		private static readonly int[] invasions = { -1, -2, -3, -4, -5, -6, -7, -8, -10, -11 };
+		private static readonly int[] invasions = { -1, -2, -3, -4, -5, -6, -7, -8, -10 };
 		private static readonly int[] pets = { -12, -13, -14, -15 };
+		private static readonly int[] upgrades = { -11, -17, -18 };
 		private static bool HandleSpawnBoss(GetDataHandlerArgs args)
 		{
 			if (args.Player.IsBouncerThrottled())
@@ -3632,8 +3633,8 @@ namespace TShockAPI
 			var plr = args.Data.ReadInt16();
 			var thingType = args.Data.ReadInt16();
 
-			var isKnownBoss = thingType > 0 && thingType < Terraria.ID.NPCID.Count && NPCID.Sets.MPAllowedEnemies[thingType];
-			if ((isKnownBoss || thingType == -16) && !args.Player.HasPermission(Permissions.summonboss))
+			var isKnownBoss = (thingType > 0 && thingType < Terraria.ID.NPCID.Count && NPCID.Sets.MPAllowedEnemies[thingType]) || thingType == -16;
+			if (isKnownBoss && !args.Player.HasPermission(Permissions.summonboss))
 			{
 				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawnBoss rejected boss {0} {1}", args.Player.Name, thingType));
 				args.Player.SendErrorMessage(GetString("You do not have permission to summon bosses."));
@@ -3651,6 +3652,13 @@ namespace TShockAPI
 			{
 				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawnBoss rejected pet {0} {1}", args.Player.Name, thingType));
 				args.Player.SendErrorMessage(GetString("You do not have permission to spawn pets."));
+				return true;
+			}
+
+			if (upgrades.Contains(thingType) && !args.Player.HasPermission(Permissions.worldupgrades))
+			{
+				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawnBoss rejected upgrade {0} {1}", args.Player.Name, thingType));
+				args.Player.SendErrorMessage(GetString("You do not have permission to use permanent boosters."));
 				return true;
 			}
 
@@ -3720,7 +3728,7 @@ namespace TShockAPI
 					break;
 			}
 
-			if (NPCID.Sets.MPAllowedEnemies[thingType])
+			if (thingType < 0 || isKnownBoss)
 			{
 				if (TShock.Config.Settings.AnonymousBossInvasions)
 					TShock.Utils.SendLogs(thing, Color.PaleVioletRed, args.Player);
