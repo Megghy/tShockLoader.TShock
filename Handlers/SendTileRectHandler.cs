@@ -269,7 +269,7 @@ namespace TShockAPI.Handlers
 
 			private MatchResult MatchPlacement(TSPlayer player, TileRect rect)
 			{
-				for (int x = rect.X; x < rect.Y + rect.Width; x++)
+				for (int x = rect.X; x < rect.X + rect.Width; x++)
 				{
 					for (int y = rect.Y; y < rect.Y + rect.Height; y++)
 					{
@@ -303,7 +303,7 @@ namespace TShockAPI.Handlers
 
 			private MatchResult MatchStateChange(TSPlayer player, TileRect rect)
 			{
-				for (int x = rect.X; x < rect.Y + rect.Width; x++)
+				for (int x = rect.X; x < rect.X + rect.Width; x++)
 				{
 					for (int y = rect.Y; y < rect.Y + rect.Height; y++)
 					{
