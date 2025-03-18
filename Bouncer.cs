@@ -1199,18 +1199,18 @@ namespace TShockAPI
 			int index = args.Index;
 			float[] ai = args.Ai;
 
+			// Clients do send NaN values so we can't just kick them
+			// See https://github.com/Pryaxis/TShock/issues/3076
 			if (!float.IsFinite(pos.X) || !float.IsFinite(pos.Y))
 			{
-				TShock.Log.ConsoleInfo(GetString("Bouncer / OnNewProjectile force kicked (attempted to set position to infinity or NaN) from {0}", args.Player.Name));
-				args.Player.Kick(GetString("Detected DOOM set to ON position."), true, true);
+				TShock.Log.ConsoleInfo(GetString("Bouncer / OnNewProjectile rejected set position to infinity or NaN from {0}", args.Player.Name));
 				args.Handled = true;
 				return;
 			}
 
 			if (!float.IsFinite(vel.X) || !float.IsFinite(vel.Y))
 			{
-				TShock.Log.ConsoleInfo(GetString("Bouncer / OnNewProjectile force kicked (attempted to set velocity to infinity or NaN) from {0}", args.Player.Name));
-				args.Player.Kick(GetString("Detected DOOM set to ON position."), true, true);
+				TShock.Log.ConsoleInfo(GetString("Bouncer / OnNewProjectile rejected set velocity to infinity or NaN from {0}", args.Player.Name));
 				args.Handled = true;
 				return;
 			}
