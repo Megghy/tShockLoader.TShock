@@ -2491,7 +2491,7 @@ namespace TShockAPI
 
 			if (!args.Player.HasBuildPermission(args.X, args.Y))
 			{
-				int num = Item.NewItem(new EntitySource_DebugCommand(), (args.X * 16) + 8, (args.Y * 16) + 8, args.Player.TPlayer.width, args.Player.TPlayer.height, args.ItemID, args.Stack, noBroadcast: true, args.Prefix, noGrabDelay: true);
+				int num = Item.NewItem(null, (args.X * 16) + 8, (args.Y * 16) + 8, args.Player.TPlayer.width, args.Player.TPlayer.height, args.ItemID, args.Stack, noBroadcast: true, args.Prefix, noGrabDelay: true);
 				Main.item[num].playerIndexTheItemIsReservedFor = args.Player.Index;
 				NetMessage.SendData((int)PacketTypes.ItemDrop, args.Player.Index, -1, NetworkText.Empty, num, 1f);
 				NetMessage.SendData((int)PacketTypes.ItemOwner, args.Player.Index, -1, NetworkText.Empty, num);
