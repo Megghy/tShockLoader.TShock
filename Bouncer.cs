@@ -2493,8 +2493,8 @@ namespace TShockAPI
 			{
 				int num = Item.NewItem(new EntitySource_DebugCommand(), (args.X * 16) + 8, (args.Y * 16) + 8, args.Player.TPlayer.width, args.Player.TPlayer.height, args.ItemID, args.Stack, noBroadcast: true, args.Prefix, noGrabDelay: true);
 				Main.item[num].playerIndexTheItemIsReservedFor = args.Player.Index;
-				NetMessage.SendData((int)PacketTypes.ItemDrop, -1, -1, NetworkText.Empty, num, 1f);
-				NetMessage.SendData((int)PacketTypes.ItemOwner, -1, -1, NetworkText.Empty, num);
+				NetMessage.SendData((int)PacketTypes.ItemDrop, args.Player.Index, -1, NetworkText.Empty, num, 1f);
+				NetMessage.SendData((int)PacketTypes.ItemOwner, args.Player.Index, -1, NetworkText.Empty, num);
 				
 				TShock.Log.ConsoleDebug(GetString("Bouncer / OnPlaceItemFrame rejected permissions from {0}", args.Player.Name));
 				NetMessage.SendData((int)PacketTypes.UpdateTileEntity, -1, -1, NetworkText.Empty, args.ItemFrame.ID, 0, 1);
