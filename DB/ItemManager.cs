@@ -39,10 +39,9 @@ namespace TShockAPI.DB
 			                         new SqlColumn("ItemName", MySqlDbType.VarChar, 50) {Primary = true},
 			                         new SqlColumn("AllowedGroups", MySqlDbType.Text)
 				);
-			var creator = new SqlTableCreator(db,
-			                                  db.GetSqlType() == SqlType.Sqlite
-			                                  	? (IQueryBuilder) new SqliteQueryCreator()
-			                                  	: new MysqlQueryCreator());
+
+			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
+
 			creator.EnsureTableStructure(table);
 			UpdateItemBans();
 		}
@@ -51,14 +50,13 @@ namespace TShockAPI.DB
 		{
 			ItemBans.Clear();
 
-			using (var reader = database.QueryReader("SELECT * FROM ItemBans"))
+			using var reader = database.QueryReader("SELECT * FROM ItemBans");
+
+			while (reader != null && reader.Read())
 			{
-				while (reader != null && reader.Read())
-				{
-					ItemBan ban = new ItemBan(reader.Get<string>("ItemName"));
-					ban.SetAllowedGroups(reader.Get<string>("AllowedGroups"));
-					ItemBans.Add(ban);
-				}
+				ItemBan ban = new ItemBan(reader.Get<string>("ItemName"));
+				ban.SetAllowedGroups(reader.Get<string>("AllowedGroups"));
+				ItemBans.Add(ban);
 			}
 		}
 
@@ -92,14 +90,7 @@ namespace TShockAPI.DB
 			}
 		}
 
-		public bool ItemIsBanned(string name)
-		{
-			if (ItemBans.Contains(new ItemBan(name)))
-			{
-				return true;
-			}
-			return false;
-		}
+		public bool ItemIsBanned(string name) => ItemBans.Contains(new(name));
 
 		public bool ItemIsBanned(string name, TSPlayer ply)
 		{
@@ -109,13 +100,12 @@ namespace TShockAPI.DB
 
 		public bool AllowGroup(string item, string name)
 		{
-			string groupsNew = "";
 			ItemBan b = GetItemBanByName(item);
 			if (b != null)
 			{
 				try
 				{
-					groupsNew = String.Join(",", b.AllowedGroups);
+					string groupsNew = string.Join(",", b.AllowedGroups);
 					if (groupsNew.Length > 0)
 						groupsNew += ",";
 					groupsNew += name;
@@ -123,7 +113,7 @@ namespace TShockAPI.DB
 
 					int q = database.Query("UPDATE ItemBans SET AllowedGroups=@0 WHERE ItemName=@1", groupsNew,
 					                       item);
-					
+
 					return q > 0;
 				}
 				catch (Exception ex)
@@ -141,12 +131,12 @@ namespace TShockAPI.DB
 			if (b != null)
 			{
 				try
-				{				
+				{
 					b.RemoveGroup(group);
 					string groups = string.Join(",", b.AllowedGroups);
 					int q = database.Query("UPDATE ItemBans SET AllowedGroups=@0 WHERE ItemName=@1", groups,
 					                       item);
-					
+
 					if (q > 0)
 						return true;
 				}
@@ -158,7 +148,7 @@ namespace TShockAPI.DB
 			return false;
 		}
 
-		public ItemBan GetItemBanByName(String name)
+		public ItemBan GetItemBanByName(string name)
 		{
 			for (int i = 0; i < ItemBans.Count; i++)
 			{
@@ -189,10 +179,7 @@ namespace TShockAPI.DB
 			AllowedGroups = new List<string>();
 		}
 
-		public bool Equals(ItemBan other)
-		{
-			return Name == other.Name;
-		}
+		public bool Equals(ItemBan other) => Name == other.Name;
 
 		public bool HasPermissionToUseItem(TSPlayer ply)
 		{
@@ -225,12 +212,12 @@ namespace TShockAPI.DB
 			// could add in the other permissions in this class instead of a giant if switch.
 		}
 
-		public void SetAllowedGroups(String groups)
+		public void SetAllowedGroups(string groups)
 		{
 			// prevent null pointer exceptions
 			if (!string.IsNullOrEmpty(groups))
 			{
-				List<String> groupArr = groups.Split(',').ToList();
+				List<string> groupArr = groups.Split(',').ToList();
 
 				for (int i = 0; i < groupArr.Count; i++)
 				{
@@ -245,10 +232,10 @@ namespace TShockAPI.DB
 		{
 			return AllowedGroups.Remove(groupName);
 		}
-		
+
 		public override string ToString()
 		{
-			return Name + (AllowedGroups.Count > 0 ? " (" + String.Join(",", AllowedGroups) + ")" : "");
+			return Name + (AllowedGroups.Count > 0 ? " (" + string.Join(",", AllowedGroups) + ")" : "");
 		}
 	}
 }

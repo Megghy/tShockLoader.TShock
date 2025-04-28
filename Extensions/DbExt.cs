@@ -23,6 +23,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.Data.Sqlite;
 using MySql.Data.MySqlClient;
 using Npgsql;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {
@@ -152,6 +153,14 @@ namespace TShockAPI.DB
 			MySqlConnection => SqlType.Mysql,
 			NpgsqlConnection => SqlType.Postgres,
 			_ => SqlType.Unknown
+		};
+
+		public static IQueryBuilder GetSqlQueryBuilder(this IDbConnection db) => db.GetSqlType() switch
+		{
+			SqlType.Sqlite => new SqliteQueryCreator(),
+			SqlType.Mysql => new MysqlQueryCreator(),
+			SqlType.Postgres => new PostgresQueryCreator(),
+			_ => throw new NotSupportedException("Database type not supported.")
 		};
 
 		private static readonly Dictionary<Type, Func<IDataReader, int, object>> ReadFuncs = new Dictionary

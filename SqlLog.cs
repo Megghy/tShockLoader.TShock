@@ -62,7 +62,7 @@ namespace TShockAPI
 		/// <param name="clearTextLog"></param>
 		public SqlLog(IDbConnection db, string textlogFilepath, bool clearTextLog)
 		{
-			FileName = string.Format("{0}://database", db.GetSqlType());
+			FileName = $"{db.GetSqlType()}://database";
 			_database = db;
 			_backupLog = new TextLog(textlogFilepath, clearTextLog);
 
@@ -74,10 +74,7 @@ namespace TShockAPI
 				new SqlColumn("Message", MySqlDbType.Text)
 				);
 
-			var creator = new SqlTableCreator(db,
-				db.GetSqlType() == SqlType.Sqlite
-					? (IQueryBuilder) new SqliteQueryCreator()
-					: new MysqlQueryCreator());
+			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
 			creator.EnsureTableStructure(table);
 		}
 

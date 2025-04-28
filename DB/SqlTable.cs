@@ -75,31 +75,44 @@ namespace TShockAPI.DB
 
 		public List<string> GetColumns(SqlTable table)
 		{
-			var ret = new List<string>();
-			var name = database.GetSqlType();
-			if (name == SqlType.Sqlite)
+			List<string> ret = new();
+			switch (database.GetSqlType())
 			{
-				using (var reader = database.QueryReader("PRAGMA table_info({0})".SFormat(table.Name)))
+				case SqlType.Sqlite:
 				{
+					using QueryResult reader = database.QueryReader("PRAGMA table_info({0})".SFormat(table.Name));
 					while (reader.Read())
+					{
 						ret.Add(reader.Get<string>("name"));
+					}
+
+					break;
 				}
-			}
-			else if (name == SqlType.Mysql)
-			{
-				using (
-					var reader =
-						database.QueryReader(
-							"SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_NAME=@0 AND TABLE_SCHEMA=@1", table.Name,
-							database.Database))
+				case SqlType.Mysql:
 				{
+					using QueryResult reader =
+						database.QueryReader("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_NAME=@0 AND TABLE_SCHEMA=@1", table.Name, database.Database);
+
 					while (reader.Read())
+					{
 						ret.Add(reader.Get<string>("COLUMN_NAME"));
+					}
+
+					break;
 				}
-			}
-			else
-			{
-				throw new NotSupportedException();
+				case SqlType.Postgres:
+				{
+					using QueryResult reader =
+						database.QueryReader("SELECT column_name FROM information_schema.columns WHERE table_name=@0", table.Name);
+
+					while (reader.Read())
+					{
+						ret.Add(reader.Get<string>("column_name"));
+					}
+
+					break;
+				}
+				default: throw new NotSupportedException();
 			}
 
 			return ret;

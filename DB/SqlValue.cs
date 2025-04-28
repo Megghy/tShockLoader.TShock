@@ -59,11 +59,9 @@ namespace TShockAPI.DB
 		{
 			List<object> values = new List<object>();
 
-			using (var reader = database.QueryReader(creator.ReadColumn(table, wheres)))
-			{
-				while (reader.Read())
-					values.Add(reader.Reader.Get<object>(column));
-			}
+			using var reader = database.QueryReader(creator.ReadColumn(table, wheres));
+			while (reader.Read())
+				values.Add(reader.Reader.Get<object>(column));
 
 			return values;
 		}
