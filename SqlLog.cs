@@ -24,6 +24,7 @@ using System.Globalization;
 using System.Linq;
 using MySql.Data.MySqlClient;
 using TShockAPI.DB;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI
 {
