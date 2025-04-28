@@ -70,15 +70,22 @@ namespace TShockAPI.DB
 			int ret;
 			try
 			{
-				ret = _database.Query("INSERT INTO Users (Username, Password, UUID, UserGroup, Registered) VALUES (@0, @1, @2, @3, @4);", account.Name,
-					account.Password, account.UUID, account.Group, DateTime.UtcNow.ToString("s"));
+				string query = _database.GetSqlType() switch
+				{
+					SqlType.Postgres => "INSERT INTO Users (\"Username\", \"Password\", \"UUID\", \"Usergroup\", \"Registered\") VALUES (@0, @1, @2, @3, @4);",
+					_ => "INSERT INTO Users (Username, Password, UUID, Usergroup, Registered) VALUES (@0, @1, @2, @3, @4);"
+				};
+
+				ret = _database.Query(query, account.Name, account.Password, account.UUID, account.Group, DateTime.UtcNow.ToString("s"));
 			}
-			catch (Exception ex)
+			// Detect duplicate user using a regexp as Sqlite doesn't have well structured exceptions
+			catch (Exception e) when (Regex.IsMatch(e.Message, "Username.*not unique|UNIQUE constraint failed: Users\\.Username"))
 			{
-				// Detect duplicate user using a regexp as Sqlite doesn't have well structured exceptions
-				if (Regex.IsMatch(ex.Message, "Username.*not unique|UNIQUE constraint failed: Users\\.Username"))
-					throw new UserAccountExistsException(account.Name);
-				throw new UserAccountManagerException(GetString($"AddUser SQL returned an error ({ex.Message})"), ex);
+				throw new UserAccountExistsException(account.Name);
+			}
+			catch (Exception e)
+			{
+				throw new UserAccountManagerException(GetString($"AddUser SQL returned an error ({e.Message})"), e);
 			}
 
 			if (1 > ret)
@@ -99,7 +106,7 @@ namespace TShockAPI.DB
 				TShock.Players.Where(p => p?.IsLoggedIn == true && p.Account.Name == account.Name).ForEach(p => p.Logout());
 
 				UserAccount tempuser = GetUserAccount(account);
-				int affected = _database.Query("DELETE FROM Users WHERE Username=@0", account.Name);
+				int affected = _database.Query($"DELETE FROM Users WHERE {"Username".EscapeSqlId(_database)}=@0", account.Name);
 
 				if (affected < 1)
 					throw new UserAccountNotExistException(account.Name);
@@ -124,10 +131,11 @@ namespace TShockAPI.DB
 			{
 				account.CreateBCryptHash(password);
 
-				if (
-					_database.Query("UPDATE Users SET Password = @0 WHERE Username = @1;", account.Password,
-						account.Name) == 0)
+				if (_database.Query($"UPDATE Users SET {"Password".EscapeSqlId(_database)} = @0 WHERE {"Username".EscapeSqlId(_database)} = @1;",
+					    account.Password, account.Name) is 0)
+				{
 					throw new UserAccountNotExistException(account.Name);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -144,10 +152,10 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				if (
-					_database.Query("UPDATE Users SET UUID = @0 WHERE Username = @1;", uuid,
-								   account.Name) == 0)
+				if (_database.Query(/*lang=sql*/$"UPDATE Users SET {"UUID".EscapeSqlId(_database)} = @0 WHERE {"Username".EscapeSqlId(_database)} = @1;", uuid, account.Name) is 0)
+				{
 					throw new UserAccountNotExistException(account.Name);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -169,7 +177,7 @@ namespace TShockAPI.DB
 			if (AccountHooks.OnAccountGroupUpdate(account, ref grp))
 				throw new UserGroupUpdateLockedException(account.Name);
 
-			if (_database.Query("UPDATE Users SET UserGroup = @0 WHERE Username = @1;", grp.Name, account.Name) == 0)
+			if (_database.Query($"UPDATE Users SET {"UserGroup".EscapeSqlId(_database)} = @0 WHERE {"Username".EscapeSqlId(_database)} = @1;", grp.Name, account.Name) == 0)
 				throw new UserAccountNotExistException(account.Name);
 
 			try
@@ -200,7 +208,7 @@ namespace TShockAPI.DB
 			if (AccountHooks.OnAccountGroupUpdate(account, author, ref grp))
 				throw new UserGroupUpdateLockedException(account.Name);
 
-			if (_database.Query("UPDATE Users SET UserGroup = @0 WHERE Username = @1;", grp.Name, account.Name) == 0)
+			if (_database.Query($"UPDATE Users SET {"UserGroup".EscapeSqlId(_database)} = @0 WHERE {"Username".EscapeSqlId(_database)} = @1;", grp.Name, account.Name) == 0)
 				throw new UserAccountNotExistException(account.Name);
 
 			try
@@ -223,8 +231,12 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				if (_database.Query("UPDATE Users SET LastAccessed = @0, KnownIps = @1 WHERE Username = @2;", DateTime.UtcNow.ToString("s"), account.KnownIps, account.Name) == 0)
+				if (_database.Query(
+					    $"UPDATE Users SET {"LastAccessed".EscapeSqlId(_database)} = @0, {"KnownIPs".EscapeSqlId(_database)} = @1 WHERE {"Username".EscapeSqlId(_database)} = @2;",
+					    DateTime.UtcNow.ToString("s"), account.KnownIps, account.Name) is 0
+				) {
 					throw new UserAccountNotExistException(account.Name);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -388,7 +400,7 @@ namespace TShockAPI.DB
 			account.Name = result.Get<string>("Username");
 			account.Registered = result.Get<string>("Registered");
 			account.LastAccessed = result.Get<string>("LastAccessed");
-			account.KnownIps = result.Get<string>("KnownIps");
+			account.KnownIps = result.Get<string>("KnownIPs");
 			return account;
 		}
 	}

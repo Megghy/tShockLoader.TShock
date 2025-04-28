@@ -253,13 +253,7 @@ namespace TShockAPI.DB
 		/// </summary>
 		/// <param name="group">The group.</param>
 		/// <returns><c>true</c> if it does; otherwise, <c>false</c>.</returns>
-		public bool GroupExists(string group)
-		{
-			if (group == "superadmin")
-				return true;
-
-			return groups.Any(g => g.Name.Equals(group));
-		}
+		public bool GroupExists(string group) => group is "superadmin" || groups.Any(g => g.Name.Equals(group));
 
 		IEnumerator IEnumerable.GetEnumerator()
 		{
@@ -270,21 +264,14 @@ namespace TShockAPI.DB
 		/// Gets the enumerator.
 		/// </summary>
 		/// <returns>The enumerator.</returns>
-		public IEnumerator<Group> GetEnumerator()
-		{
-			return groups.GetEnumerator();
-		}
+		public IEnumerator<Group> GetEnumerator() => groups.GetEnumerator();
 
 		/// <summary>
 		/// Gets the group matching the specified name.
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <returns>The group.</returns>
-		public Group GetGroupByName(string name)
-		{
-			var ret = groups.Where(g => g.Name == name);
-			return 1 == ret.Count() ? ret.ElementAt(0) : null;
-		}
+		public Group GetGroupByName(string name) => groups.FirstOrDefault(g => g.Name == name);
 
 		/// <summary>
 		/// Adds group with name and permissions if it does not exist.
