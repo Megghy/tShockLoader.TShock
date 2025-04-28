@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using Microsoft.Data.Sqlite;
 using MySql.Data.MySqlClient;
+using Npgsql;
 using TerrariaApi.Server;
 using TShockAPI.Configuration;
 
@@ -45,6 +46,7 @@ public sealed class DbBuilder
 		{
 			"sqlite" => BuildSqliteConnection(),
 			"mysql" => BuildMySqlConnection(),
+			"postgres" => BuildPostgresConnection(),
 			_ => throw new("Invalid storage type")
 		};
 	}
@@ -84,6 +86,30 @@ public sealed class DbBuilder
 		{
 			ServerApi.LogWriter.PluginWriteLine(_caller, e.ToString(), TraceLevel.Error);
 			throw new("MySql not setup correctly", e);
+		}
+	}
+
+	private NpgsqlConnection BuildPostgresConnection()
+	{
+		try
+		{
+			string[] hostport = _config.Settings.PostgresHost.Split(':');
+
+			NpgsqlConnectionStringBuilder connStrBuilder = new()
+			{
+				Host = hostport[0],
+				Port = hostport.Length > 1 ? int.Parse(hostport[1]) : 5432,
+				Database = _config.Settings.PostgresDbName,
+				Username = _config.Settings.PostgresUsername,
+				Password = _config.Settings.PostgresPassword
+			};
+
+			return new(connStrBuilder.ToString());
+		}
+		catch (NpgsqlException e)
+		{
+			ServerApi.LogWriter.PluginWriteLine(_caller, e.ToString(), TraceLevel.Error);
+			throw new("Postgres not setup correctly", e);
 		}
 	}
 }
