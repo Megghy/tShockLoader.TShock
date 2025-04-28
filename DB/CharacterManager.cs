@@ -23,6 +23,7 @@ using System.Linq;
 using System.Text;
 using MySql.Data.MySqlClient;
 using Terraria;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {

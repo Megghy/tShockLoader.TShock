@@ -23,6 +23,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using MySql.Data.MySqlClient;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {

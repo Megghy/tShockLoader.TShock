@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Terraria;
 using Terraria.ID;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {

@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using MySql.Data.MySqlClient;
+using TShockAPI.DB.Queries;
 using TShockAPI.Hooks;
 
 namespace TShockAPI.DB

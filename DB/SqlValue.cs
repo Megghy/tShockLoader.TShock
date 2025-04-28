@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using System.Collections.Generic;
 using System.Data;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {
