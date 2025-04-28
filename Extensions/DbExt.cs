@@ -20,6 +20,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Data.Sqlite;
+using MySql.Data.MySqlClient;
+using Npgsql;
 
 namespace TShockAPI.DB
 {
@@ -143,15 +146,13 @@ namespace TShockAPI.DB
 			return clone;
 		}
 
-		public static SqlType GetSqlType(this IDbConnection conn)
+		public static SqlType GetSqlType(this IDbConnection conn) => conn switch
 		{
-			var name = conn.GetType().Name;
-			if (name == "SqliteConnection" || name == "SQLiteConnection")
-				return SqlType.Sqlite;
-			if (name == "MySqlConnection")
-				return SqlType.Mysql;
-			return SqlType.Unknown;
-		}
+			SqliteConnection => SqlType.Sqlite,
+			MySqlConnection => SqlType.Mysql,
+			NpgsqlConnection => SqlType.Postgres,
+			_ => SqlType.Unknown
+		};
 
 		private static readonly Dictionary<Type, Func<IDataReader, int, object>> ReadFuncs = new Dictionary
 			<Type, Func<IDataReader, int, object>>
@@ -267,7 +268,8 @@ namespace TShockAPI.DB
 	{
 		Unknown,
 		Sqlite,
-		Mysql
+		Mysql,
+		Postgres
 	}
 
 	public class QueryResult : IDisposable
