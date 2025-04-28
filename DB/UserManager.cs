@@ -239,7 +239,7 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				using var reader = _database.QueryReader("SELECT * FROM Users WHERE Username=@0", username);
+				using var reader = _database.QueryReader($"SELECT * FROM Users WHERE {"Username".EscapeSqlId(_database)}=@0", username);
 				if (reader.Read())
 				{
 					return reader.Get<int>("ID");
@@ -293,13 +293,13 @@ namespace TShockAPI.DB
 			object arg;
 			if (account.ID != 0)
 			{
-				query = "SELECT * FROM Users WHERE ID=@0";
+				query = $"SELECT * FROM Users WHERE {"ID".EscapeSqlId(_database)}=@0";
 				arg = account.ID;
 				type = "id";
 			}
 			else
 			{
-				query = "SELECT * FROM Users WHERE Username=@0";
+				query = $"SELECT * FROM Users WHERE {"Username".EscapeSqlId(_database)}=@0";
 				arg = account.Name;
 				type = "name";
 			}
@@ -358,9 +358,9 @@ namespace TShockAPI.DB
 			try
 			{
 				List<UserAccount> accounts = new List<UserAccount>();
-				string search = notAtStart ? string.Format("%{0}%", username) : string.Format("{0}%", username);
-				using var reader = _database.QueryReader("SELECT * FROM Users WHERE Username LIKE @0",
-					search);
+				string search = $"{(notAtStart ? "%" : "")}{username}%";
+				using var reader = _database.QueryReader($"SELECT * FROM Users WHERE {"Username".EscapeSqlId(_database)} LIKE @0", search);
+
 				while (reader.Read())
 				{
 					accounts.Add(LoadUserAccountFromResult(new UserAccount(), reader));

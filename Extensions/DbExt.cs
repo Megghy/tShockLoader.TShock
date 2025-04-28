@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
 using Microsoft.Data.Sqlite;
 using MySql.Data.MySqlClient;
 using Npgsql;
@@ -42,17 +43,17 @@ namespace TShockAPI.DB
 		[SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
 		public static int Query(this IDbConnection olddb, string query, params object[] args)
 		{
-			using (var db = olddb.CloneEx())
+			using IDbConnection db = olddb.CloneEx();
+			db.Open();
+			using IDbCommand com = db.CreateCommand();
+			com.CommandText = query;
+
+			for (int i = 0; i < args.Length; i++)
 			{
-				db.Open();
-				using (var com = db.CreateCommand())
-				{
-					com.CommandText = query;
-					for (int i = 0; i < args.Length; i++)
-						com.AddParameter("@" + i, args[i] ?? DBNull.Value);
-					return com.ExecuteNonQuery();
-				}
+				com.AddParameter("@" + i, args[i] ?? DBNull.Value);
 			}
+
+			return com.ExecuteNonQuery();
 		}
 
 		/// <summary>
@@ -271,6 +272,18 @@ namespace TShockAPI.DB
 
 			return (T)reader.GetValue(column);
 		}
+
+		/// <summary>
+		/// Escapes an identifier for use in a SQL query.
+		/// </summary>
+		/// <param name="id">The identifier to escape, typically a table or column name.</param>
+		/// <returns>The escaped identifier.</returns>
+		[Pure]
+		public static string EscapeSqlId(this string id, IDbConnection db) => db.GetSqlType() switch
+		{
+			SqlType.Postgres => $"\"{id}\"", // The main PITA and culprit
+			_ => id // Default case for agnostic SQL
+		};
 	}
 
 	public enum SqlType

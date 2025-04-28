@@ -59,7 +59,9 @@ namespace TShockAPI.DB
 			var columns = GetColumns(table);
 			if (columns.Count > 0)
 			{
-				if (!table.Columns.All(c => columns.Contains(c.Name)) || !columns.All(c => table.Columns.Any(c2 => c2.Name == c)))
+				// Use OrdinalIgnoreCase to account for pgsql automatically lowering cases.
+				if (!table.Columns.All(c => columns.Contains(c.Name, StringComparer.OrdinalIgnoreCase))
+				    || !columns.All(c => table.Columns.Any(c2 => c2.Name.Equals(c, StringComparison.OrdinalIgnoreCase))))
 				{
 					var from = new SqlTable(table.Name, columns.Select(s => new SqlColumn(s, MySqlDbType.String)).ToList());
 					database.Query(creator.AlterTable(from, table));
@@ -70,6 +72,7 @@ namespace TShockAPI.DB
 				database.Query(creator.CreateTable(table));
 				return true;
 			}
+
 			return false;
 		}
 
@@ -102,8 +105,8 @@ namespace TShockAPI.DB
 				}
 				case SqlType.Postgres:
 				{
-					using QueryResult reader =
-						database.QueryReader("SELECT column_name FROM information_schema.columns WHERE table_name=@0", table.Name);
+					// HACK: Using "ilike" op to ignore case, due to weird case issues adapting for pgsql
+					using QueryResult reader = database.QueryReader("SELECT column_name FROM information_schema.columns WHERE table_name ILIKE @0", table.Name);
 
 					while (reader.Read())
 					{

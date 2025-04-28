@@ -67,9 +67,9 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				using var reader = database.QueryReader("SELECT * FROM Regions WHERE WorldID=@0", Main.worldID.ToString());
-
+				using var reader = database.QueryReader($"SELECT * FROM Regions WHERE {"WorldID".EscapeSqlId(database)}=@0", Main.worldID.ToString());
 				Regions.Clear();
+
 				while (reader.Read())
 				{
 					int id = reader.Get<int>("Id");
@@ -135,10 +135,17 @@ namespace TShockAPI.DB
 			}
 			try
 			{
-				database.Query(
-					"INSERT INTO Regions (X1, Y1, width, height, RegionName, WorldID, UserIds, Protected, `Groups`, Owner, Z) VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10);",
-					tx, ty, width, height, regionname, worldid, "", 1, "", owner, z);
+				string query = database.GetSqlType() switch
+				{
+					SqlType.Postgres => "INSERT INTO Regions (\"X1\", \"Y1\", \"width\", \"height\", \"RegionName\", \"WorldID\", \"UserIds\", \"Protected\", \"Groups\", \"Owner\", \"Z\") VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10);",
+					_ => "INSERT INTO Regions (X1, Y1, width, height, RegionName, WorldID, UserIds, Protected, Groups, Owner, Z) VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10);",
+
+				};
+
+				database.Query(query, tx, ty, width, height, regionname, worldid, "", 1, "", owner, z);
+
 				int id;
+
 				using (QueryResult res = database.QueryReader("SELECT Id FROM Regions WHERE RegionName = @0 AND WorldID = @1", regionname, worldid))
 				{
 					if (res.Read())

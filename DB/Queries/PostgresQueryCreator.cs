@@ -79,9 +79,7 @@ public class PostgresQueryCreator : GenericQueryCreator
 			.Where(c => c.Unique).Select(c => $"\"{c.Name}\"")
 			.ToArray(); // No re-enumeration
 
-		return "CREATE TABLE {0} ({1} {2})".SFormat(EscapeTableName(table.Name),
-			string.Join(", ", columns),
-			uniques.Any() ? ", UNIQUE({0})".SFormat(string.Join(", ", uniques)) : "");
+		return $"CREATE TABLE {EscapeTableName(table.Name)} ({string.Join(", ", columns)} {(uniques.Any() ? ", UNIQUE({0})".SFormat(string.Join(", ", uniques)) : "")})";
 	}
 
 	/// <inheritdoc />

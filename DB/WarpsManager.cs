@@ -86,7 +86,7 @@ namespace TShockAPI.DB
 		{
 			Warps.Clear();
 
-			using var reader = database.QueryReader("SELECT * FROM Warps WHERE WorldID = @0",
+			using var reader = database.QueryReader($"SELECT * FROM Warps WHERE {"WorldID".EscapeSqlId(database)} = @0",
 				Main.worldID.ToString());
 			while (reader.Read())
 			{

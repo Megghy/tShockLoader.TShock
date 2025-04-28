@@ -314,15 +314,22 @@ namespace TShockAPI.DB
 				group.Parent = parent;
 			}
 
-			string query = (TShock.Config.Settings.StorageType.ToLower() == "sqlite")
-				? "INSERT OR IGNORE INTO GroupList (GroupName, Parent, Commands, ChatColor) VALUES (@0, @1, @2, @3);"
-				: "INSERT IGNORE INTO GroupList SET GroupName=@0, Parent=@1, Commands=@2, ChatColor=@3";
-			if (database.Query(query, name, parentname, permissions, chatcolor) == 1)
+			string query = database.GetSqlType() switch
+			{
+				SqlType.Sqlite => "INSERT OR IGNORE INTO GroupList (GroupName, Parent, Commands, ChatColor) VALUES (@0, @1, @2, @3);",
+				SqlType.Mysql => "INSERT IGNORE INTO GroupList SET GroupName=@0, Parent=@1, Commands=@2, ChatColor=@3",
+				SqlType.Postgres => "INSERT INTO GroupList (\"GroupName\", \"Parent\", \"Commands\", \"ChatColor\") VALUES (@0, @1, @2, @3) ON CONFLICT (\"GroupName\") DO NOTHING",
+				_ => throw new NotSupportedException(GetString("Unsupported database type."))
+			};
+
+			if (database.Query(query, name, parentname, permissions, chatcolor) is 1)
 			{
 				groups.Add(group);
 			}
 			else
+			{
 				throw new GroupManagerException(GetString($"Failed to add group {name}."));
+			}
 		}
 
 		/// <summary>
@@ -362,9 +369,12 @@ namespace TShockAPI.DB
 			}
 
 			// Ensure any group validation is also persisted to the DB.
-			var newGroup = new Group(name, parent, chatcolor, permissions);
-			newGroup.Prefix = prefix;
-			newGroup.Suffix = suffix;
+			var newGroup = new Group(name, parent, chatcolor, permissions)
+			{
+				Prefix = prefix,
+				Suffix = suffix
+			};
+
 			string query = "UPDATE GroupList SET Parent=@0, Commands=@1, ChatColor=@2, Suffix=@3, Prefix=@4 WHERE GroupName=@5";
 			if (database.Query(query, parentname, newGroup.Permissions, newGroup.ChatColor, suffix, prefix, name) != 1)
 				throw new GroupManagerException(GetString($"Failed to update group \"{name}\"."));
