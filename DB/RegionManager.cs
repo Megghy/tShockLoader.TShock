@@ -67,9 +67,9 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				using var reader = database.QueryReader($"SELECT * FROM Regions WHERE {"WorldID".EscapeSqlId(database)}=@0", Main.worldID.ToString());
-				Regions.Clear();
+				using var reader = database.QueryReader("SELECT * FROM Regions WHERE WorldID=@0", Main.worldID.ToString());
 
+				Regions.Clear();
 				while (reader.Read())
 				{
 					int id = reader.Get<int>("Id");
@@ -135,19 +135,11 @@ namespace TShockAPI.DB
 			}
 			try
 			{
-				string query = database.GetSqlType() switch
-				{
-					SqlType.Postgres => "INSERT INTO Regions (\"X1\", \"Y1\", \"width\", \"height\", \"RegionName\", \"WorldID\", \"UserIds\", \"Protected\", \"Groups\", \"Owner\", \"Z\") VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10);",
-					_ => "INSERT INTO Regions (X1, Y1, width, height, RegionName, WorldID, UserIds, Protected, Groups, Owner, Z) VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10);",
-
-				};
-
-				database.Query(query, tx, ty, width, height, regionname, worldid, "", 1, "", owner, z);
-
+				database.Query(
+					"INSERT INTO Regions (X1, Y1, width, height, RegionName, WorldID, UserIds, Protected, `Groups`, Owner, Z) VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10);",
+					tx, ty, width, height, regionname, worldid, "", 1, "", owner, z);
 				int id;
-
-				using (QueryResult res = database.QueryReader(
-					       $"SELECT {"Id".EscapeSqlId(database)} FROM Regions WHERE {"RegionName".EscapeSqlId(database)} = @0 AND {"WorldID".EscapeSqlId(database)} = @1", regionname, worldid))
+				using (QueryResult res = database.QueryReader("SELECT Id FROM Regions WHERE RegionName = @0 AND WorldID = @1", regionname, worldid))
 				{
 					if (res.Read())
 					{
@@ -158,7 +150,6 @@ namespace TShockAPI.DB
 						return false;
 					}
 				}
-
 				Region region = new Region(id, new Rectangle(tx, ty, width, height), regionname, owner, true, worldid, z);
 				Regions.Add(region);
 				Hooks.RegionHooks.OnRegionCreated(region);
@@ -180,7 +171,7 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				database.Query($"DELETE FROM Regions WHERE Id=@0 AND {"WorldID".EscapeSqlId(database)}=@1", id, Main.worldID.ToString());
+				database.Query("DELETE FROM Regions WHERE Id=@0 AND WorldID=@1", id, Main.worldID.ToString());
 				var worldid = Main.worldID.ToString();
 				var region = Regions.FirstOrDefault(r => r.ID == id && r.WorldID == worldid);
 				Regions.RemoveAll(r => r.ID == id && r.WorldID == worldid);
@@ -203,7 +194,7 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				database.Query($"DELETE FROM Regions WHERE {"RegionName".EscapeSqlId(database)}=@0 AND {"WorldID".EscapeSqlId(database)}=@1", name, Main.worldID.ToString());
+				database.Query("DELETE FROM Regions WHERE RegionName=@0 AND WorldID=@1", name, Main.worldID.ToString());
 				var worldid = Main.worldID.ToString();
 				var region = Regions.FirstOrDefault(r => r.Name == name && r.WorldID == worldid);
 				Regions.RemoveAll(r => r.Name == name && r.WorldID == worldid);
@@ -253,7 +244,7 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				database.Query($"UPDATE Regions SET {"Protected".EscapeSqlId(database)}=@0 WHERE {"RegionName".EscapeSqlId(database)}=@1 AND {"WorldID".EscapeSqlId(database)}=@2", state ? 1 : 0, name,
+				database.Query("UPDATE Regions SET Protected=@0 WHERE RegionName=@1 AND WorldID=@2", state ? 1 : 0, name,
 							   Main.worldID.ToString());
 				var region = GetRegionByName(name);
 				if (region != null)

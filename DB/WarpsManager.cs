@@ -65,13 +65,8 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				string query = database.GetSqlType() switch
-				{
-					SqlType.Postgres => "INSERT INTO Warps (\"X\", \"Y\", \"WarpName\", \"WorldID\") VALUES (@0, @1, @2, @3);",
-					_ => "INSERT INTO Warps (X, Y, WarpName, WorldID) VALUES (@0, @1, @2, @3);"
-				};
-
-				if (database.Query(query, x, y, name, Main.worldID.ToString()) > 0)
+				if (database.Query("INSERT INTO Warps (X, Y, WarpName, WorldID) VALUES (@0, @1, @2, @3);",
+					x, y, name, Main.worldID.ToString()) > 0)
 				{
 					Warps.Add(new Warp(new Point(x, y), name));
 					return true;
@@ -81,7 +76,6 @@ namespace TShockAPI.DB
 			{
 				TShock.Log.Error(ex.ToString());
 			}
-
 			return false;
 		}
 
@@ -92,7 +86,7 @@ namespace TShockAPI.DB
 		{
 			Warps.Clear();
 
-			using var reader = database.QueryReader($"SELECT * FROM Warps WHERE {"WorldID".EscapeSqlId(database)} = @0",
+			using var reader = database.QueryReader("SELECT * FROM Warps WHERE WorldID = @0",
 				Main.worldID.ToString());
 			while (reader.Read())
 			{
@@ -112,7 +106,7 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				if (database.Query($"DELETE FROM Warps WHERE {"WarpName".EscapeSqlId(database)} = @0 AND {"WorldID".EscapeSqlId(database)} = @1",
+				if (database.Query("DELETE FROM Warps WHERE WarpName = @0 AND WorldID = @1",
 					warpName, Main.worldID.ToString()) > 0)
 				{
 					Warps.RemoveAll(w => string.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase));
@@ -147,7 +141,7 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				if (database.Query($"UPDATE Warps SET X = @0, Y = @1 WHERE {"WarpName".EscapeSqlId(database)} = @2 AND WorldID = @3",
+				if (database.Query("UPDATE Warps SET X = @0, Y = @1 WHERE WarpName = @2 AND WorldID = @3",
 					x, y, warpName, Main.worldID.ToString()) > 0)
 				{
 					Warps.Find(w => string.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase)).Position = new Point(x, y);
@@ -171,7 +165,7 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				if (database.Query($"UPDATE Warps SET {"Private".EscapeSqlId(database)} = @0 WHERE {"WarpName".EscapeSqlId(database)} = @1 AND {"WorldID".EscapeSqlId(database)} = @2",
+				if (database.Query("UPDATE Warps SET Private = @0 WHERE WarpName = @1 AND WorldID = @2",
 					state ? "1" : "0", warpName, Main.worldID.ToString()) > 0)
 				{
 					Warps.Find(w => string.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase)).IsPrivate = state;

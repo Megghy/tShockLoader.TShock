@@ -78,7 +78,7 @@ namespace TShockAPI.DB
 			}
 			catch (DllNotFoundException)
 			{
-				Console.WriteLine(GetString("Possible problem with your database - is Sqlite3.dll present?"));
+				System.Console.WriteLine(GetString("Possible problem with your database - is Sqlite3.dll present?"));
 				throw new Exception(GetString("Could not find a database library (probably Sqlite3.dll)"));
 			}
 
@@ -355,9 +355,7 @@ namespace TShockAPI.DB
 				return Bans[id];
 			}
 
-			string query = $"SELECT * FROM PlayerBans WHERE {"TicketNumber".EscapeSqlId(database)}=@0";
-
-			using var reader = database.QueryReader(query, id);
+			using var reader = database.QueryReader("SELECT * FROM PlayerBans WHERE TicketNumber=@0", id);
 
 			if (reader.Read())
 			{
@@ -382,11 +380,10 @@ namespace TShockAPI.DB
 		/// <returns></returns>
 		public IEnumerable<Ban> RetrieveBansByIdentifier(string identifier, bool currentOnly = true)
 		{
-			string query = $"SELECT * FROM PlayerBans WHERE {"Identifier".EscapeSqlId(database)}=@0";
-
+			string query = "SELECT * FROM PlayerBans WHERE Identifier=@0";
 			if (currentOnly)
 			{
-				query += $" AND {"Expiration".EscapeSqlId(database)} > {DateTime.UtcNow.Ticks}";
+				query += $" AND Expiration > {DateTime.UtcNow.Ticks}";
 			}
 
 			using var reader = database.QueryReader(query, identifier);
@@ -415,11 +412,11 @@ namespace TShockAPI.DB
 			//Generate a sequence of '@0, @1, @2, ... etc'
 			var parameters = string.Join(", ", Enumerable.Range(0, identifiers.Length).Select(p => $"@{p}"));
 
-			string query = $"SELECT * FROM PlayerBans WHERE {"Identifier".EscapeSqlId(database)} IN ({parameters})";
+			string query = $"SELECT * FROM PlayerBans WHERE Identifier IN ({parameters})";
 
 			if (currentOnly)
 			{
-				query += $" AND {"Expiration".EscapeSqlId(database)} > {DateTime.UtcNow.Ticks}";
+				query += $" AND Expiration > {DateTime.UtcNow.Ticks}";
 			}
 
 			using var reader = database.QueryReader(query, identifiers);
@@ -452,7 +449,7 @@ namespace TShockAPI.DB
 			List<Ban> banlist = new List<Ban>();
 			try
 			{
-				using var reader = database.QueryReader($"SELECT * FROM PlayerBans ORDER BY {SortToOrderByMap(sortMethod)}");
+				using var reader = database.QueryReader($"SELECT * FROM PlayerBans ORDER BY {SortToOrderByMap[sortMethod]}");
 
 				while (reader.Read())
 				{
@@ -493,12 +490,12 @@ namespace TShockAPI.DB
 			return false;
 		}
 
-		private string SortToOrderByMap(BanSortMethod sortMethod) => sortMethod switch
+		private readonly Dictionary<BanSortMethod, string> SortToOrderByMap = new()
 		{
-			BanSortMethod.AddedNewestToOldest => $"{"Date".EscapeSqlId(database)} DESC",
-			BanSortMethod.AddedOldestToNewest => $"{"Date".EscapeSqlId(database)} ASC",
-			BanSortMethod.ExpirationSoonestToLatest => $"{"Expiration".EscapeSqlId(database)} ASC",
-			BanSortMethod.ExpirationLatestToSoonest => $"{"Expiration".EscapeSqlId(database)} DESC"
+			{ BanSortMethod.AddedNewestToOldest, "Date DESC" },
+			{ BanSortMethod.AddedOldestToNewest, "Date ASC" },
+			{ BanSortMethod.ExpirationSoonestToLatest, "Expiration ASC" },
+			{ BanSortMethod.ExpirationLatestToSoonest, "Expiration DESC" }
 		};
 	}
 

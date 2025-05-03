@@ -253,7 +253,13 @@ namespace TShockAPI.DB
 		/// </summary>
 		/// <param name="group">The group.</param>
 		/// <returns><c>true</c> if it does; otherwise, <c>false</c>.</returns>
-		public bool GroupExists(string group) => group is "superadmin" || groups.Any(g => g.Name.Equals(group));
+		public bool GroupExists(string group)
+		{
+			if (group == "superadmin")
+				return true;
+
+			return groups.Any(g => g.Name.Equals(group));
+		}
 
 		IEnumerator IEnumerable.GetEnumerator()
 		{
@@ -264,14 +270,21 @@ namespace TShockAPI.DB
 		/// Gets the enumerator.
 		/// </summary>
 		/// <returns>The enumerator.</returns>
-		public IEnumerator<Group> GetEnumerator() => groups.GetEnumerator();
+		public IEnumerator<Group> GetEnumerator()
+		{
+			return groups.GetEnumerator();
+		}
 
 		/// <summary>
 		/// Gets the group matching the specified name.
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <returns>The group.</returns>
-		public Group GetGroupByName(string name) => groups.FirstOrDefault(g => g.Name == name);
+		public Group GetGroupByName(string name)
+		{
+			var ret = groups.Where(g => g.Name == name);
+			return 1 == ret.Count() ? ret.ElementAt(0) : null;
+		}
 
 		/// <summary>
 		/// Adds group with name and permissions if it does not exist.
@@ -305,7 +318,7 @@ namespace TShockAPI.DB
 			{
 				SqlType.Sqlite => "INSERT OR IGNORE INTO GroupList (GroupName, Parent, Commands, ChatColor) VALUES (@0, @1, @2, @3);",
 				SqlType.Mysql => "INSERT IGNORE INTO GroupList SET GroupName=@0, Parent=@1, Commands=@2, ChatColor=@3",
-				SqlType.Postgres => "INSERT INTO GroupList (\"GroupName\", \"Parent\", \"Commands\", \"ChatColor\") VALUES (@0, @1, @2, @3) ON CONFLICT (\"GroupName\") DO NOTHING",
+				SqlType.Postgres => "INSERT INTO GroupList (GroupName, Parent, Commands, ChatColor) VALUES (@0, @1, @2, @3) ON CONFLICT (GroupName) DO NOTHING",
 				_ => throw new NotSupportedException(GetString("Unsupported database type."))
 			};
 
@@ -356,12 +369,9 @@ namespace TShockAPI.DB
 			}
 
 			// Ensure any group validation is also persisted to the DB.
-			var newGroup = new Group(name, parent, chatcolor, permissions)
-			{
-				Prefix = prefix,
-				Suffix = suffix
-			};
-
+			var newGroup = new Group(name, parent, chatcolor, permissions);
+			newGroup.Prefix = prefix;
+			newGroup.Suffix = suffix;
 			string query = "UPDATE GroupList SET Parent=@0, Commands=@1, ChatColor=@2, Suffix=@3, Prefix=@4 WHERE GroupName=@5";
 			if (database.Query(query, parentname, newGroup.Permissions, newGroup.ChatColor, suffix, prefix, name) != 1)
 				throw new GroupManagerException(GetString($"Failed to update group \"{name}\"."));

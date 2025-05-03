@@ -82,7 +82,7 @@ namespace TShockAPI.DB
 
 			try
 			{
-				using var reader = database.QueryReader($"SELECT * FROM tsCharacter WHERE {"Account".EscapeSqlId(database)}=@0", acctid);
+				using var reader = database.QueryReader("SELECT * FROM tsCharacter WHERE Account=@0", acctid);
 				if (reader.Read())
 				{
 					playerData.exists = true;
