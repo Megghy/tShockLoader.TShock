@@ -2778,6 +2778,9 @@ namespace TShockAPI
 					return false;
 				}
 
+				// spawn the player before teleporting
+				NetMessage.SendData((int)PacketTypes.PlayerSpawn, -1, args.Player.Index, null, args.Player.Index, (int)PlayerSpawnContext.ReviveFromDeath);
+
 				// the player has not changed his spawnpoint yet, so we assert the server-saved spawnpoint 
 				// by teleporting the player instead of letting the game use the client's incorrect spawnpoint.
 				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawn force ssc teleport for {0} at ({1},{2})", args.Player.Name, args.TPlayer.SpawnX, args.TPlayer.SpawnY));
