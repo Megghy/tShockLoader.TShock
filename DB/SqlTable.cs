@@ -106,7 +106,7 @@ namespace TShockAPI.DB
 				case SqlType.Postgres:
 				{
 					// HACK: Using "ilike" op to ignore case, due to weird case issues adapting for pgsql
-					using QueryResult reader = database.QueryReader("SELECT column_name FROM information_schema.columns WHERE table_name ILIKE @0", table.Name);
+					using QueryResult reader = database.QueryReader("SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name ILIKE @0", table.Name);
 
 					while (reader.Read())
 					{
