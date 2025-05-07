@@ -1469,8 +1469,8 @@ namespace TShockAPI
 				Hooks.PlayerHooks.OnPlayerLogout(tsplr);
 			}
 
-			// The last player will leave after this hook is executed.
-			if (Utils.GetActivePlayerCount() == 1)
+			// If this is the last player online, update the console title and save the world if needed
+			if (Utils.GetActivePlayerCount() == 0)
 			{
 				if (Config.Settings.SaveWorldOnLastPlayerExit)
 					SaveManager.Instance.SaveWorld();
