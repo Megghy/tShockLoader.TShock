@@ -23,6 +23,7 @@ using Terraria.Localization;
 using Terraria.GameContent.NetModules;
 using Terraria.Net;
 using Terraria.ID;
+using System;
 
 namespace TShockAPI
 {
@@ -63,18 +64,27 @@ namespace TShockAPI
 		public int unlockedSuperCart;
 		public int enabledSuperCart;
 
-		public PlayerData(TSPlayer player)
+		/// <summary>
+		/// Sets the default values for the inventory.
+		/// </summary>
+		[Obsolete("The player argument is not used.")]
+		public PlayerData(TSPlayer player) : this(true) { }
+
+		/// <summary>
+		/// Sets the default values for the inventory.
+		/// </summary>
+		/// <param name="includingStarterInventory">Is it necessary to load items from TShock's config</param>
+		public PlayerData(bool includingStarterInventory = true)
 		{
 			for (int i = 0; i < NetItem.MaxInventory; i++)
-			{
 				this.inventory[i] = new NetItem();
-			}
 
-			for (int i = 0; i < TShock.ServerSideCharacterConfig.Settings.StartingInventory.Count; i++)
-			{
-				var item = TShock.ServerSideCharacterConfig.Settings.StartingInventory[i];
-				StoreSlot(i, item.NetId, item.PrefixId, item.Stack);
-			}
+			if (includingStarterInventory)
+				for (int i = 0; i < TShock.ServerSideCharacterConfig.Settings.StartingInventory.Count; i++)
+				{
+					var item = TShock.ServerSideCharacterConfig.Settings.StartingInventory[i];
+					StoreSlot(i, item.NetId, item.PrefixId, item.Stack);
+				}
 		}
 
 		/// <summary>
@@ -86,12 +96,22 @@ namespace TShockAPI
 		/// <param name="stack"></param>
 		public void StoreSlot(int slot, int netID, byte prefix, int stack)
 		{
-			if (slot > (this.inventory.Length - 1)) //if the slot is out of range then dont save
+			StoreSlot(slot, new NetItem(netID, stack, prefix));
+		}
+
+		/// <summary>
+		/// Stores an item at the specific storage slot
+		/// </summary>
+		/// <param name="slot"></param>
+		/// <param name="item"></param>
+		public void StoreSlot(int slot, NetItem item)
+		{
+			if (slot > (this.inventory.Length - 1) || slot < 0) //if the slot is out of range then dont save
 			{
 				return;
 			}
 
-			this.inventory[slot] = new NetItem(netID, stack, prefix);
+			this.inventory[slot] = item;
 		}
 
 		/// <summary>
@@ -104,16 +124,8 @@ namespace TShockAPI
 			this.maxHealth = player.TPlayer.statLifeMax;
 			this.mana = player.TPlayer.statMana;
 			this.maxMana = player.TPlayer.statManaMax;
-			if (player.sX > 0 && player.sY > 0)
-			{
-				this.spawnX = player.sX;
-				this.spawnY = player.sY;
-			}
-			else
-			{
-				this.spawnX = player.TPlayer.SpawnX;
-				this.spawnY = player.TPlayer.SpawnY;
-			}
+			this.spawnX = player.TPlayer.SpawnX;
+			this.spawnY = player.TPlayer.SpawnY;
 			extraSlot = player.TPlayer.extraAccessory ? 1 : 0;
 			this.skinVariant = player.TPlayer.skinVariant;
 			this.hair = player.TPlayer.hair;
@@ -266,8 +278,6 @@ namespace TShockAPI
 			player.TPlayer.statManaMax = this.maxMana;
 			player.TPlayer.SpawnX = this.spawnX;
 			player.TPlayer.SpawnY = this.spawnY;
-			player.sX = this.spawnX;
-			player.sY = this.spawnY;
 			player.TPlayer.hairDye = this.hairDye;
 			player.TPlayer.anglerQuestsFinished = this.questsCompleted;
 			player.TPlayer.UsingBiomeTorches = this.usingBiomeTorches == 1;

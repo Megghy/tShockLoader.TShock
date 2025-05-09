@@ -95,6 +95,7 @@ namespace TShockAPI
 					{ PacketTypes.TileSendSquare, HandleSendTileRect },
 					{ PacketTypes.ItemDrop, HandleItemDrop },
 					{ PacketTypes.ItemOwner, HandleItemOwner },
+					{ PacketTypes.NpcItemStrike, HandleNpcItemStrike },
 					{ PacketTypes.ProjectileNew, HandleProjectileNew },
 					{ PacketTypes.NpcStrike, HandleNpcStrike },
 					{ PacketTypes.ProjectileDestroy, HandleProjectileKill },
@@ -2248,7 +2249,7 @@ namespace TShockAPI
 
 			var args = new SyncTilePickingEventArgs
 			{
-                                Player = player,
+				Player = player,
 				PlayerIndex = playerIndex,
 				TileX = tileX,
 				TileY = tileY,
@@ -2618,18 +2619,19 @@ namespace TShockAPI
 
 		private static bool HandleConnecting(GetDataHandlerArgs args)
 		{
-			var account = TShock.UserAccounts.GetUserAccountByName(args.Player.Name);//
-			args.Player.DataWhenJoined = new PlayerData(args.Player);
+			var account = TShock.UserAccounts.GetUserAccountByName(args.Player.Name);
+			args.Player.DataWhenJoined = new PlayerData(false);
 			args.Player.DataWhenJoined.CopyCharacter(args.Player);
-			args.Player.PlayerData = new PlayerData(args.Player);
+			args.Player.PlayerData = new PlayerData(false);
 			args.Player.PlayerData.CopyCharacter(args.Player);
 
 			if (account != null && !TShock.Config.Settings.DisableUUIDLogin)
 			{
 				if (account.UUID == args.Player.UUID)
 				{
-					if (args.Player.State == 1)
-						args.Player.State = 2;
+					if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+						args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
+
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 
 					var group = TShock.Groups.GetGroupByName(account.Group);
@@ -2687,8 +2689,9 @@ namespace TShockAPI
 				return true;
 			}
 
-			if (args.Player.State == 1)
-				args.Player.State = 2;
+			if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+				args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
+
 			NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 			return true;
 		}
@@ -2719,52 +2722,75 @@ namespace TShockAPI
 			}
 
 			byte player = args.Data.ReadInt8();
-			short spawnx = args.Data.ReadInt16();
-			short spawny = args.Data.ReadInt16();
+			short spawnX = args.Data.ReadInt16();
+			short spawnY = args.Data.ReadInt16();
 			int respawnTimer = args.Data.ReadInt32();
 			short numberOfDeathsPVE = args.Data.ReadInt16();
 			short numberOfDeathsPVP = args.Data.ReadInt16();
 			PlayerSpawnContext context = (PlayerSpawnContext)args.Data.ReadByte();
 
-			args.Player.FinishedHandshake = true;
+			if (args.Player.State >= (int)ConnectionState.RequestingWorldData && !args.Player.FinishedHandshake)
+				args.Player.FinishedHandshake = true; //If the player has requested world data before sending spawn player, they should be at the obvious ClientRequestedWorldData state. Also only set this once to remove redundant updates.
 
-			if (OnPlayerSpawn(args.Player, args.Data, player, spawnx, spawny, respawnTimer, numberOfDeathsPVE, numberOfDeathsPVP, context))
+			if (OnPlayerSpawn(args.Player, args.Data, player, spawnX, spawnY, respawnTimer, numberOfDeathsPVE, numberOfDeathsPVP, context))
 				return true;
+			
+			args.Player.Dead = respawnTimer > 0;
 
-			if ((Main.ServerSideCharacter) && (spawnx == -1 && spawny == -1)) //this means they want to spawn to vanilla spawn
+			if (Main.ServerSideCharacter)
 			{
-				args.Player.sX = Main.spawnTileX;
-				args.Player.sY = Main.spawnTileY;
-				args.Player.Teleport(args.Player.sX * 16, (args.Player.sY * 16) - 48);
-				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawn force teleport 'vanilla spawn' {0}", args.Player.Name));
-			}
+				// As long as the player has not changed his spawnpoint since initial connection,
+				// we should not use the client's spawnpoint value. This is because the spawnpoint 
+				// value is not saved on the client when SSC is enabled. Hence, we have to assert 
+				// the server-saved spawnpoint value until we can detect that the player has changed 
+				// his spawn. Once we detect the spawnpoint changed, the client's spawnpoint value
+				// becomes the correct one to use.
+				//
+				// Note that spawnpoint changes (right-clicking beds) are not broadcasted to the 
+				// server. Hence, the only way to detect spawnpoint changes is from the 
+				// PlayerSpawn packet.
 
-			else if ((Main.ServerSideCharacter) && (args.Player.sX > 0) && (args.Player.sY > 0) && (args.TPlayer.SpawnX > 0) && ((args.TPlayer.SpawnX != args.Player.sX) && (args.TPlayer.SpawnY != args.Player.sY)))
-			{
-				args.Player.sX = args.TPlayer.SpawnX;
-				args.Player.sY = args.TPlayer.SpawnY;
-
-				if (((Main.tile[args.Player.sX, args.Player.sY - 1].active() && Main.tile[args.Player.sX, args.Player.sY - 1].type == TileID.Beds)) && (WorldGen.StartRoomCheck(args.Player.sX, args.Player.sY - 1)))
+				// handle initial connection
+				if (args.Player.State == 3)
 				{
-					args.Player.Teleport(args.Player.sX * 16, (args.Player.sY * 16) - 48);
-					TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawn force teleport phase 1 {0}", args.Player.Name));
-				}
-			}
+					// server saved spawnpoint value
+					args.Player.initialSpawn = true;
+					args.Player.initialServerSpawnX = args.TPlayer.SpawnX;
+					args.Player.initialServerSpawnY = args.TPlayer.SpawnY;
 
-			else if ((Main.ServerSideCharacter) && (args.Player.sX > 0) && (args.Player.sY > 0))
-			{
-				if (((Main.tile[args.Player.sX, args.Player.sY - 1].active() && Main.tile[args.Player.sX, args.Player.sY - 1].type == TileID.Beds)) && (WorldGen.StartRoomCheck(args.Player.sX, args.Player.sY - 1)))
+					// initial client spawn point, do not use this to spawn the player
+					// we only use it to detect if the spawnpoint has changed during this session
+					args.Player.initialClientSpawnX = spawnX;
+					args.Player.initialClientSpawnY = spawnY;
+
+					// we first let the game handle completing the connection (state 3 => 10), 
+					// then we will spawn the player at the saved spawnpoint in the next second, 
+					// by reasserting the correct spawnpoint value
+					return false;
+				}
+
+				// once we detect the client has changed his spawnpoint in the current session, 
+				// the client spawnpoint value will be correct for the rest of the session
+				if (args.Player.spawnSynced || args.Player.initialClientSpawnX != spawnX || args.Player.initialClientSpawnY != spawnY)
 				{
-					args.Player.Teleport(args.Player.sX * 16, (args.Player.sY * 16) - 48);
-					TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawn force teleport phase 2 {0}", args.Player.Name));
+					// Player has changed his spawnpoint, client and server TPlayer.Spawn{X,Y} is now synced
+					args.Player.spawnSynced = true;
+					return false;
 				}
+
+				// spawn the player before teleporting
+				NetMessage.SendData((int)PacketTypes.PlayerSpawn, -1, args.Player.Index, null, args.Player.Index, (int)PlayerSpawnContext.ReviveFromDeath);
+
+				// the player has not changed his spawnpoint yet, so we assert the server-saved spawnpoint 
+				// by teleporting the player instead of letting the game use the client's incorrect spawnpoint.
+				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawn force ssc teleport for {0} at ({1},{2})", args.Player.Name, args.TPlayer.SpawnX, args.TPlayer.SpawnY));
+				args.Player.TeleportSpawnpoint();
+				
+				args.TPlayer.respawnTimer = respawnTimer;
+				args.TPlayer.numberOfDeathsPVE = numberOfDeathsPVE;
+				args.TPlayer.numberOfDeathsPVP = numberOfDeathsPVP;
+				return true;
 			}
-
-			if (respawnTimer > 0)
-				args.Player.Dead = true;
-			else
-				args.Player.Dead = false;
-
 			return false;
 		}
 
@@ -2943,6 +2969,13 @@ namespace TShockAPI
 			}
 
 			return false;
+		}
+
+		private static bool HandleNpcItemStrike(GetDataHandlerArgs args)
+		{
+			// Never sent by vanilla client, ignore this
+			TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleNpcItemStrike surprise packet! Someone tell the TShock team! {0}", args.Player.Name));
+			return true;
 		}
 
 		private static bool HandleProjectileNew(GetDataHandlerArgs args)
@@ -3218,8 +3251,9 @@ namespace TShockAPI
 					args.Player.RequiresPassword = false;
 					args.Player.PlayerData = TShock.CharacterDB.GetPlayerData(args.Player, account.ID);
 
-					if (args.Player.State == 1)
-						args.Player.State = 2;
+					if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+						args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
+
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 
 					var group = TShock.Groups.GetGroupByName(account.Group);
@@ -3266,8 +3300,10 @@ namespace TShockAPI
 				if (TShock.Config.Settings.ServerPassword == password)
 				{
 					args.Player.RequiresPassword = false;
-					if (args.Player.State == 1)
-						args.Player.State = 2;
+
+					if (args.Player.State == (int)ConnectionState.AssigningPlayerSlot)
+						args.Player.State = (int)ConnectionState.AwaitingPlayerInfo;
+
 					NetMessage.SendData((int)PacketTypes.WorldInfo, args.Player.Index);
 					return true;
 				}
@@ -3435,9 +3471,9 @@ namespace TShockAPI
 				if (buff == 10 && TShock.Config.Settings.DisableInvisPvP && args.TPlayer.hostile)
 					buff = 0;
 
-				if (Netplay.Clients[args.TPlayer.whoAmI].State < 2 && (buff == 156 || buff == 47 || buff == 149))
+				if (Netplay.Clients[args.TPlayer.whoAmI].State < (int)ConnectionState.AwaitingPlayerInfo && (buff == 156 || buff == 47 || buff == 149))
 				{
-					TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandlePlayerBuffList zeroed player buff due to below state 2 {0} {1}", args.Player.Name, buff));
+					TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandlePlayerBuffList zeroed player buff due to below state awaiting player information {0} {1}", args.Player.Name, buff));
 					buff = 0;
 				}
 
@@ -3465,15 +3501,23 @@ namespace TShockAPI
 			if (OnNPCSpecial(args.Player, args.Data, id, type))
 				return true;
 
-			if (type == 1 && TShock.Config.Settings.DisableDungeonGuardian)
+			if (type == 1)
 			{
-				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpecial rejected type 1 for {0}", args.Player.Name));
-				args.Player.SendMessage(GetString("The Dungeon Guardian returned you to your spawn point."), Color.Purple);
-				args.Player.Spawn(PlayerSpawnContext.RecallFromItem);
-				return true;
-			}
+				if (!args.Player.HasPermission(Permissions.summonboss))
+				{
+					args.Player.SendErrorMessage(GetString("You do not have permission to summon the Skeletron."));
+					TShock.Log.ConsoleDebug(GetString($"GetDataHandlers / HandleNpcStrike rejected Skeletron summon from {args.Player.Name}"));
+					return true;
+				}
 
-			if (type == 3)
+				return false;
+			}
+			else if (type == 2)
+			{
+				// Plays SoundID.Item1
+				return false;
+			}
+			else if (type == 3)
 			{
 				if (!args.Player.HasPermission(Permissions.usesundial))
 				{
@@ -3492,6 +3536,42 @@ namespace TShockAPI
 						args.Player.SendErrorMessage(GetString("You must set ForceTime to normal via config to use the Enchanted Sundial."));
 					return true;
 				}
+			}
+			else if (type == 4)
+			{
+				// Big Mimic Spawn Smoke
+				return false;
+			}
+			else if (type == 5)
+			{
+				// Register Kill for Torch God in Bestiary
+				return false;
+			}
+			else if (type == 6)
+			{
+				if (!args.Player.HasPermission(Permissions.usemoondial))
+				{
+					TShock.Log.ConsoleDebug(GetString($"GetDataHandlers / HandleSpecial rejected enchanted moondial permission {args.Player.Name}"));
+					args.Player.SendErrorMessage(GetString("You do not have permission to use the Enchanted Moondial."));
+					return true;
+				}
+				else if (TShock.Config.Settings.ForceTime != "normal")
+				{
+					TShock.Log.ConsoleDebug(GetString($"GetDataHandlers / HandleSpecial rejected enchanted moondial permission (ForceTime) {args.Player.Name}"));
+					if (!args.Player.HasPermission(Permissions.cfgreload))
+					{
+						args.Player.SendErrorMessage(GetString("You cannot use the Enchanted Moondial because time is stopped."));
+					}
+					else
+						args.Player.SendErrorMessage(GetString("You must set ForceTime to normal via config to use the Enchanted Moondial."));
+					return true;
+				}
+			}
+			else if (!args.Player.HasPermission($"tshock.specialeffects.{type}"))
+			{
+				args.Player.SendErrorMessage(GetString("You do not have permission to use this effect."));
+				TShock.Log.ConsoleError(GetString("Unrecognized special effect (Packet 51). Please report this to the TShock developers."));
+				return true;
 			}
 
 			return false;
@@ -3542,8 +3622,9 @@ namespace TShockAPI
 			return false;
 		}
 
-		private static readonly int[] invasions = { -1, -2, -3, -4, -5, -6, -7, -8, -10, -11 };
+		private static readonly int[] invasions = { -1, -2, -3, -4, -5, -6, -7, -8, -10 };
 		private static readonly int[] pets = { -12, -13, -14, -15 };
+		private static readonly int[] upgrades = { -11, -17, -18 };
 		private static bool HandleSpawnBoss(GetDataHandlerArgs args)
 		{
 			if (args.Player.IsBouncerThrottled())
@@ -3555,8 +3636,8 @@ namespace TShockAPI
 			var plr = args.Data.ReadInt16();
 			var thingType = args.Data.ReadInt16();
 
-			var isKnownBoss = thingType > 0 && thingType < Terraria.ID.NPCID.Count && NPCID.Sets.MPAllowedEnemies[thingType];
-			if ((isKnownBoss || thingType == -16) && !args.Player.HasPermission(Permissions.summonboss))
+			var isKnownBoss = (thingType > 0 && thingType < Terraria.ID.NPCID.Count && NPCID.Sets.MPAllowedEnemies[thingType]) || thingType == -16;
+			if (isKnownBoss && !args.Player.HasPermission(Permissions.summonboss))
 			{
 				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawnBoss rejected boss {0} {1}", args.Player.Name, thingType));
 				args.Player.SendErrorMessage(GetString("You do not have permission to summon bosses."));
@@ -3574,6 +3655,13 @@ namespace TShockAPI
 			{
 				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawnBoss rejected pet {0} {1}", args.Player.Name, thingType));
 				args.Player.SendErrorMessage(GetString("You do not have permission to spawn pets."));
+				return true;
+			}
+
+			if (upgrades.Contains(thingType) && !args.Player.HasPermission(Permissions.worldupgrades))
+			{
+				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawnBoss rejected upgrade {0} {1}", args.Player.Name, thingType));
+				args.Player.SendErrorMessage(GetString("You do not have permission to use permanent boosters."));
 				return true;
 			}
 
@@ -3642,10 +3730,15 @@ namespace TShockAPI
 					thing = GetString("{0} summoned the {1}!", args.Player.Name, npc.FullName);
 					break;
 			}
-			if (TShock.Config.Settings.AnonymousBossInvasions)
-				TShock.Utils.SendLogs(thing, Color.PaleVioletRed, args.Player);
-			else
-				TShock.Utils.Broadcast(thing, 175, 75, 255);
+
+			if (thingType < 0 || isKnownBoss)
+			{
+				if (TShock.Config.Settings.AnonymousBossInvasions)
+					TShock.Utils.SendLogs(thing, Color.PaleVioletRed, args.Player);
+				else
+					TShock.Utils.Broadcast(thing, 175, 75, 255);
+			}
+
 			return false;
 		}
 

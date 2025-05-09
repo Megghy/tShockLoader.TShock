@@ -331,6 +331,9 @@ namespace TShockAPI
 		[Description("Player can use the Enchanted Sundial item.")]
 		public static readonly string usesundial = "tshock.world.time.usesundial";
 
+		[Description("Player can use the Enchanted Moondial item.")]
+		public static readonly string usemoondial = "tshock.world.time.usemoondial";
+
 		[Description("User can grow plants.")]
 		public static readonly string grow = "tshock.world.grow";
 
@@ -343,8 +346,12 @@ namespace TShockAPI
 		[Description("User can change the homes of NPCs.")]
 		public static readonly string movenpc = "tshock.world.movenpc";
 
+		[Obsolete("Feature no longer available.")]
 		[Description("User can convert hallow into corruption and vice-versa.")]
 		public static readonly string converthardmode = "tshock.world.converthardmode";
+
+		[Description("User can use world-based permanent boosters like Advanced Combat Techniques")]
+		public static readonly string worldupgrades = "tshock.world.worldupgrades";
 
 		[Description("User can force the server to Halloween mode.")]
 		public static readonly string halloween = "tshock.world.sethalloween";

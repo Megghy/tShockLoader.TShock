@@ -79,7 +79,7 @@ namespace TShockAPI.DB
 
 		public PlayerData GetPlayerData(TSPlayer player, int acctid)
 		{
-			PlayerData playerData = new PlayerData(player);
+			PlayerData playerData = new PlayerData(true);
 
 			try
 			{
@@ -189,7 +189,7 @@ namespace TShockAPI.DB
 			if (!player.IsLoggedIn)
 				return false;
 
-			if (player.State < 10)
+			if (player.State < (int)ConnectionState.Complete)
 				return false;
 
 			if (player.HasPermission(Permissions.bypassssc) && !fromCommand)
