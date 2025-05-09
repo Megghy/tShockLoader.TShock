@@ -63,7 +63,7 @@ namespace TShockAPI
 		/// <summary>VersionNum - The version number the TerrariaAPI will return back to the API. We just use the Assembly info.</summary>
 		public static readonly Version VersionNum = Assembly.GetExecutingAssembly().GetName().Version;
 		/// <summary>VersionCodename - The version codename is displayed when the server starts. Inspired by software codenames conventions.</summary>
-		public static readonly string VersionCodename = "Stargazer";
+		public static readonly string VersionCodename = "Hopefully SSC works somewhat correctly now edition";
 
 		/// <summary>SavePath - This is the path TShock saves its data in. This path is relative to the TerrariaServer.exe (not in ServerPlugins).</summary>
 		public static string SavePath = "tshock";
@@ -1441,8 +1441,8 @@ namespace TShockAPI
 				Hooks.PlayerHooks.OnPlayerLogout(tsplr);
 			}
 
-			// The last player will leave after this hook is executed.
-			if (Utils.GetActivePlayerCount() == 1)
+			// If this is the last player online, update the console title and save the world if needed
+			if (Utils.GetActivePlayerCount() == 0)
 			{
 				if (Config.Settings.SaveWorldOnLastPlayerExit)
 					SaveManager.Instance.SaveWorld();
