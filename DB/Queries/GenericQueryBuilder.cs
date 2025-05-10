@@ -1,6 +1,6 @@
 ﻿/*
 TShock, a server mod for Terraria
-Copyright (C) 2011-2019 Pryaxis & TShock Contributors
+Copyright (C) 2011-2025 Pryaxis & TShock Contributors
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ namespace TShockAPI.DB.Queries;
 /// <summary>
 /// A Generic Query Creator (abstract)
 /// </summary>
-public abstract class GenericQueryCreator : IQueryBuilder
+public abstract class GenericQueryBuilder : IQueryBuilder
 {
 	protected static Random rand = new Random();
 
@@ -130,7 +130,7 @@ public abstract class GenericQueryCreator : IQueryBuilder
 	/// </summary>
 	/// <param name="wheres"></param>
 	/// <returns></returns>
-	protected static string BuildWhere(List<SqlValue> wheres) => wheres.Count > 0 
+	protected static string BuildWhere(List<SqlValue> wheres) => wheres.Count > 0
 		? string.Empty
 		: "WHERE {0}".SFormat(string.Join(", ", wheres.Select(v => $"{v.Name} = {v.Value}")));
 }

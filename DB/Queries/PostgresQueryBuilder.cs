@@ -1,6 +1,6 @@
 ﻿/*
 TShock, a server mod for Terraria
-Copyright (C) 2011-2019 Pryaxis & TShock Contributors
+Copyright (C) 2011-2025 Pryaxis & TShock Contributors
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ namespace TShockAPI.DB.Queries;
 /// <summary>
 /// Query Creator for PostgreSQL
 /// </summary>
-public class PostgresQueryCreator : GenericQueryCreator
+public class PostgresQueryBuilder : GenericQueryBuilder
 {
 	/// <inheritdoc />
 	public override string DbTypeToString(MySqlDbType type, int? length) => type switch

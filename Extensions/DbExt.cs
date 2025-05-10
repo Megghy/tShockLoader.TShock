@@ -158,9 +158,9 @@ namespace TShockAPI.DB
 
 		public static IQueryBuilder GetSqlQueryBuilder(this IDbConnection db) => db.GetSqlType() switch
 		{
-			SqlType.Sqlite => new SqliteQueryCreator(),
-			SqlType.Mysql => new MysqlQueryCreator(),
-			SqlType.Postgres => new PostgresQueryCreator(),
+			SqlType.Sqlite => new SqliteQueryBuilder(),
+			SqlType.Mysql => new MysqlQueryBuilder(),
+			SqlType.Postgres => new PostgresQueryBuilder(),
 			_ => throw new NotSupportedException("Database type not supported.")
 		};
 
