@@ -552,21 +552,21 @@ namespace TShockAPI.Configuration
 		[Description("The password used when connecting to a MySQL database.")]
 		public string MySqlPassword = "";
 
- 		///<summary>The Postgres hostname and port to direct connections to.</summary>
- 		[Description("The Postgres hostname and port to direct connections to.")]
-	    public string PostgresHost = "";
+		///<summary>The Postgres hostname and port to direct connections to.</summary>
+		[Description("The Postgres hostname and port to direct connections to.")]
+		public string PostgresHost = "";
 
-	    /// <summary>The database name to connect to when using Postgres as the database type.</summary>
-	    [Description("The database name to connect to when using Postgres as the database type.")]
-	    public string PostgresDbName = "";
+		/// <summary>The database name to connect to when using Postgres as the database type.</summary>
+		[Description("The database name to connect to when using Postgres as the database type.")]
+		public string PostgresDbName = "";
 
-	    /// <summary>The username used when connecting to a Postgres database.</summary>
-	    [Description("The username used when connecting to a Postgres database.")]
-	    public string PostgresUsername = "";
+		/// <summary>The username used when connecting to a Postgres database.</summary>
+		[Description("The username used when connecting to a Postgres database.")]
+		public string PostgresUsername = "";
 
-	    /// <summary>The password used when connecting to a Postgres database.</summary>
-	    [Description("The password used when connecting to a Postgres database.")]
-	    public string PostgresPassword = "";
+		/// <summary>The password used when connecting to a Postgres database.</summary>
+		[Description("The password used when connecting to a Postgres database.")]
+		public string PostgresPassword = "";
 
 		/// <summary>Whether or not to save logs to the SQL database instead of a text file.</summary>
 		[Description("Whether or not to save logs to the SQL database instead of a text file.\nDefault = false.")]
