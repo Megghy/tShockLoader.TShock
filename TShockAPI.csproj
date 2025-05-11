@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <!-- 
@@ -18,11 +18,11 @@
       Also, be sure to release on github with the exact assembly version tag as below
       so that the update manager works correctly (via the Github releases api and mimic)
     -->
-    <Version>5.2.3</Version>
+    <Version>5.2.4</Version>
     <AssemblyTitle>TShock for Terraria</AssemblyTitle>
     <Company>Pryaxis &amp; TShock Contributors</Company>
     <Product>TShockAPI</Product>
-    <Copyright>Copyright © Pryaxis &amp; TShock Contributors 2011-2023</Copyright>
+    <Copyright>Copyright © Pryaxis &amp; TShock Contributors 2011-2025</Copyright>
     <!-- extras for nuget -->
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
@@ -33,9 +33,9 @@
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageReference Include="GetText.NET" Version="1.7.14" />
-    <PackageReference Include="MySql.Data" Version="8.4.0" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.11" />
+    <PackageReference Include="GetText.NET" Version="8.0.5" />
+    <PackageReference Include="MySql.Data" Version="9.1.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
