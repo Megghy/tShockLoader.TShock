@@ -29,6 +29,7 @@ using Terraria.DataStructures;
 using Terraria.Localization;
 using TShockAPI.Models.PlayerUpdate;
 using System.Threading.Tasks;
+using Terraria.GameContent.Tile_Entities;
 
 namespace TShockAPI
 {
@@ -605,6 +606,7 @@ namespace TShockAPI
 			int tileY = args.Y;
 			short editData = args.EditData;
 			EditType type = args.editDetail;
+			ITile tile = Main.tile[tileX, tileY];
 
 			// 'placeStyle' is a term used in Terraria land to determine which frame of a sprite is displayed when the sprite is placed. The placeStyle
 			// determines the frameX and frameY offsets
@@ -624,6 +626,15 @@ namespace TShockAPI
 				if (!args.Player.HasBuildPermission(tileX, tileY))
 				{
 					TShock.Log.ConsoleDebug(GetString("Bouncer / OnTileEdit rejected from build from {0} {1} {2}", args.Player.Name, action, editData));
+
+					if (tile.type == TileID.ItemFrame)
+					{
+						int itemFrameId = TEItemFrame.Find(tileX - tile.frameX % 36 / 18, tileY - tile.frameY % 36 / 18);
+						if (itemFrameId != -1)
+						{
+							NetMessage.SendData((int)PacketTypes.UpdateTileEntity, -1, -1, NetworkText.Empty, itemFrameId, 0, 1);
+						}
+					}
 
 					GetRollbackRectSize(tileX, tileY, out byte width, out byte length, out int offsetY);
 					args.Player.SendTileRect((short)(tileX - width), (short)(tileY + offsetY), (byte)(width * 2), (byte)(length + 1));
@@ -658,7 +669,6 @@ namespace TShockAPI
 
 				Item selectedItem = args.Player.SelectedItem;
 				int lastKilledProj = args.Player.LastKilledProjectile;
-				ITile tile = Main.tile[tileX, tileY];
 
 				if (action == EditAction.PlaceTile || action == EditAction.ReplaceTile)
 				{
