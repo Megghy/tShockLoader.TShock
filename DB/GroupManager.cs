@@ -23,6 +23,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using MySql.Data.MySqlClient;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {
@@ -50,10 +51,9 @@ namespace TShockAPI.DB
 				new SqlColumn("Prefix", MySqlDbType.Text),
 				new SqlColumn("Suffix", MySqlDbType.Text)
 			);
-			var creator = new SqlTableCreator(db,
-				db.GetSqlType() == SqlType.Sqlite
-					? (IQueryBuilder)new SqliteQueryCreator()
-					: new MysqlQueryCreator());
+
+			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
+
 			if (creator.EnsureTableStructure(table))
 			{
 				// Add default groups if they don't exist
@@ -74,6 +74,7 @@ namespace TShockAPI.DB
 						Permissions.canchangepassword,
 						Permissions.canlogout,
 						Permissions.summonboss,
+						Permissions.spawnpets,
 						Permissions.worldupgrades,
 						Permissions.whisper,
 						Permissions.wormhole,
@@ -293,7 +294,7 @@ namespace TShockAPI.DB
 		/// <param name="parentname">parent of group</param>
 		/// <param name="permissions">permissions</param>
 		/// <param name="chatcolor">chatcolor</param>
-		public void AddGroup(String name, string parentname, String permissions, String chatcolor)
+		public void AddGroup(string name, string parentname, string permissions, string chatcolor)
 		{
 			if (GroupExists(name))
 			{
@@ -314,15 +315,22 @@ namespace TShockAPI.DB
 				group.Parent = parent;
 			}
 
-			string query = (TShock.Config.Settings.StorageType.ToLower() == "sqlite")
-				? "INSERT OR IGNORE INTO GroupList (GroupName, Parent, Commands, ChatColor) VALUES (@0, @1, @2, @3);"
-				: "INSERT IGNORE INTO GroupList SET GroupName=@0, Parent=@1, Commands=@2, ChatColor=@3";
-			if (database.Query(query, name, parentname, permissions, chatcolor) == 1)
+			string query = database.GetSqlType() switch
+			{
+				SqlType.Sqlite => "INSERT OR IGNORE INTO GroupList (GroupName, Parent, Commands, ChatColor) VALUES (@0, @1, @2, @3);",
+				SqlType.Mysql => "INSERT IGNORE INTO GroupList SET GroupName=@0, Parent=@1, Commands=@2, ChatColor=@3",
+				SqlType.Postgres => "INSERT INTO GroupList (GroupName, Parent, Commands, ChatColor) VALUES (@0, @1, @2, @3) ON CONFLICT (GroupName) DO NOTHING",
+				_ => throw new NotSupportedException(GetString("Unsupported database type."))
+			};
+
+			if (database.Query(query, name, parentname, permissions, chatcolor) is 1)
 			{
 				groups.Add(group);
 			}
 			else
+			{
 				throw new GroupManagerException(GetString($"Failed to add group {name}."));
+			}
 		}
 
 		/// <summary>
@@ -382,7 +390,7 @@ namespace TShockAPI.DB
 		/// <param name="name">The group's name.</param>
 		/// <param name="newName">The new name.</param>
 		/// <returns>The result from the operation to be sent back to the user.</returns>
-		public String RenameGroup(string name, string newName)
+		public string RenameGroup(string name, string newName)
 		{
 			if (!GroupExists(name))
 			{
@@ -394,87 +402,83 @@ namespace TShockAPI.DB
 				throw new GroupExistsException(newName);
 			}
 
-			using (var db = database.CloneEx())
+			using var db = database.CloneEx();
+			db.Open();
+			using var transaction = db.BeginTransaction();
+			try
 			{
-				db.Open();
-				using (var transaction = db.BeginTransaction())
+				using (var command = db.CreateCommand())
 				{
-					try
-					{
-						using (var command = db.CreateCommand())
-						{
-							command.CommandText = "UPDATE GroupList SET GroupName = @0 WHERE GroupName = @1";
-							command.AddParameter("@0", newName);
-							command.AddParameter("@1", name);
-							command.ExecuteNonQuery();
-						}
+					command.CommandText = "UPDATE GroupList SET GroupName = @0 WHERE GroupName = @1";
+					command.AddParameter("@0", newName);
+					command.AddParameter("@1", name);
+					command.ExecuteNonQuery();
+				}
 
-						var oldGroup = GetGroupByName(name);
-						var newGroup = new Group(newName, oldGroup.Parent, oldGroup.ChatColor, oldGroup.Permissions)
-						{
-							Prefix = oldGroup.Prefix,
-							Suffix = oldGroup.Suffix
-						};
-						groups.Remove(oldGroup);
-						groups.Add(newGroup);
+				var oldGroup = GetGroupByName(name);
+				var newGroup = new Group(newName, oldGroup.Parent, oldGroup.ChatColor, oldGroup.Permissions)
+				{
+					Prefix = oldGroup.Prefix,
+					Suffix = oldGroup.Suffix
+				};
+				groups.Remove(oldGroup);
+				groups.Add(newGroup);
 
-						// We need to check if the old group has been referenced as a parent and update those references accordingly
-						using (var command = db.CreateCommand())
-						{
-							command.CommandText = "UPDATE GroupList SET Parent = @0 WHERE Parent = @1";
-							command.AddParameter("@0", newName);
-							command.AddParameter("@1", name);
-							command.ExecuteNonQuery();
-						}
-						foreach (var group in groups.Where(g => g.Parent != null && g.Parent == oldGroup))
-						{
-							group.Parent = newGroup;
-						}
+				// We need to check if the old group has been referenced as a parent and update those references accordingly
+				using (var command = db.CreateCommand())
+				{
+					command.CommandText = "UPDATE GroupList SET Parent = @0 WHERE Parent = @1";
+					command.AddParameter("@0", newName);
+					command.AddParameter("@1", name);
+					command.ExecuteNonQuery();
+				}
+				foreach (var group in groups.Where(g => g.Parent != null && g.Parent == oldGroup))
+				{
+					group.Parent = newGroup;
+				}
 
-						// Read the config file to prevent the possible loss of any unsaved changes
-						TShock.Config.Read(FileTools.ConfigPath, out bool writeConfig);
-						if (TShock.Config.Settings.DefaultGuestGroupName == oldGroup.Name)
-						{
-							TShock.Config.Settings.DefaultGuestGroupName = newGroup.Name;
-							Group.DefaultGroup = newGroup;
-						}
-						if (TShock.Config.Settings.DefaultRegistrationGroupName == oldGroup.Name)
-						{
-							TShock.Config.Settings.DefaultRegistrationGroupName = newGroup.Name;
-						}
-						if (writeConfig)
-						{
-							TShock.Config.Write(FileTools.ConfigPath);
-						}
+				// Read the config file to prevent the possible loss of any unsaved changes
+				TShock.Config.Read(FileTools.ConfigPath, out bool writeConfig);
+				if (TShock.Config.Settings.DefaultGuestGroupName == oldGroup.Name)
+				{
+					TShock.Config.Settings.DefaultGuestGroupName = newGroup.Name;
+					Group.DefaultGroup = newGroup;
+				}
+				if (TShock.Config.Settings.DefaultRegistrationGroupName == oldGroup.Name)
+				{
+					TShock.Config.Settings.DefaultRegistrationGroupName = newGroup.Name;
+				}
+				if (writeConfig)
+				{
+					TShock.Config.Write(FileTools.ConfigPath);
+				}
 
-						// We also need to check if any users belong to the old group and automatically apply changes
-						using (var command = db.CreateCommand())
-						{
-							command.CommandText = "UPDATE Users SET Usergroup = @0 WHERE Usergroup = @1";
-							command.AddParameter("@0", newName);
-							command.AddParameter("@1", name);
-							command.ExecuteNonQuery();
-						}
-						foreach (var player in TShock.Players.Where(p => p?.Group == oldGroup))
-						{
-							player.Group = newGroup;
-						}
+				// We also need to check if any users belong to the old group and automatically apply changes
+				using (var command = db.CreateCommand())
+				{
+					command.CommandText = "UPDATE Users SET Usergroup = @0 WHERE Usergroup = @1";
+					command.AddParameter("@0", newName);
+					command.AddParameter("@1", name);
+					command.ExecuteNonQuery();
+				}
+				foreach (var player in TShock.Players.Where(p => p?.Group == oldGroup))
+				{
+					player.Group = newGroup;
+				}
 
-						transaction.Commit();
-						return GetString($"Group {name} has been renamed to {newName}.");
-					}
-					catch (Exception ex)
-					{
-						TShock.Log.Error(GetString($"An exception has occurred during database transaction: {ex.Message}"));
-						try
-						{
-							transaction.Rollback();
-						}
-						catch (Exception rollbackEx)
-						{
-							TShock.Log.Error(GetString($"An exception has occurred during database rollback: {rollbackEx.Message}"));
-						}
-					}
+				transaction.Commit();
+				return GetString($"Group {name} has been renamed to {newName}.");
+			}
+			catch (Exception ex)
+			{
+				TShock.Log.Error(GetString($"An exception has occurred during database transaction: {ex.Message}"));
+				try
+				{
+					transaction.Rollback();
+				}
+				catch (Exception rollbackEx)
+				{
+					TShock.Log.Error(GetString($"An exception has occurred during database rollback: {rollbackEx.Message}"));
 				}
 			}
 
@@ -487,7 +491,7 @@ namespace TShockAPI.DB
 		/// <param name="name">The group's name.</param>
 		/// <param name="exceptions">Whether exceptions will be thrown in case something goes wrong.</param>
 		/// <returns>The result from the operation to be sent back to the user.</returns>
-		public String DeleteGroup(String name, bool exceptions = false)
+		public string DeleteGroup(string name, bool exceptions = false)
 		{
 			if (!GroupExists(name))
 			{
@@ -520,7 +524,7 @@ namespace TShockAPI.DB
 		/// <param name="name">The group name.</param>
 		/// <param name="permissions">The permission list.</param>
 		/// <returns>The result from the operation to be sent back to the user.</returns>
-		public String AddPermissions(String name, List<String> permissions)
+		public string AddPermissions(string name, List<string> permissions)
 		{
 			if (!GroupExists(name))
 				return GetString($"Group {name} doesn't exist.");
@@ -543,7 +547,7 @@ namespace TShockAPI.DB
 		/// <param name="name">The group name.</param>
 		/// <param name="permissions">The permission list.</param>
 		/// <returns>The result from the operation to be sent back to the user.</returns>
-		public String DeletePermissions(String name, List<String> permissions)
+		public string DeletePermissions(string name, List<string> permissions)
 		{
 			if (!GroupExists(name))
 				return GetString($"Group {name} doesn't exist.");

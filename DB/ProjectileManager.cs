@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using MySql.Data.MySqlClient;
+using TShockAPI.DB.Queries;
 using TShockAPI.Hooks;
 
 namespace TShockAPI.DB
@@ -38,10 +39,8 @@ namespace TShockAPI.DB
 				new SqlColumn("ProjectileID", MySqlDbType.Int32) {Primary = true},
 				new SqlColumn("AllowedGroups", MySqlDbType.Text)
 				);
-			var creator = new SqlTableCreator(db,
-				db.GetSqlType() == SqlType.Sqlite
-					? (IQueryBuilder) new SqliteQueryCreator()
-					: new MysqlQueryCreator());
+
+			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
 			creator.EnsureTableStructure(table);
 			UpdateBans();
 		}
@@ -50,14 +49,13 @@ namespace TShockAPI.DB
 		{
 			ProjectileBans.Clear();
 
-			using (var reader = database.QueryReader("SELECT * FROM ProjectileBans"))
+			using var reader = database.QueryReader("SELECT * FROM ProjectileBans");
+
+			while (reader != null && reader.Read())
 			{
-				while (reader != null && reader.Read())
-				{
-					ProjectileBan ban = new ProjectileBan((short) reader.Get<Int32>("ProjectileID"));
-					ban.SetAllowedGroups(reader.Get<string>("AllowedGroups"));
-					ProjectileBans.Add(ban);
-				}
+				ProjectileBan ban = new ProjectileBan((short) reader.Get<int>("ProjectileID"));
+				ban.SetAllowedGroups(reader.Get<string>("AllowedGroups"));
+				ProjectileBans.Add(ban);
 			}
 		}
 
@@ -92,14 +90,7 @@ namespace TShockAPI.DB
 			}
 		}
 
-		public bool ProjectileIsBanned(short id)
-		{
-			if (ProjectileBans.Contains(new ProjectileBan(id)))
-			{
-				return true;
-			}
-			return false;
-		}
+		public bool ProjectileIsBanned(short id) => ProjectileBans.Contains(new(id));
 
 		public bool ProjectileIsBanned(short id, TSPlayer ply)
 		{
@@ -113,13 +104,12 @@ namespace TShockAPI.DB
 
 		public bool AllowGroup(short id, string name)
 		{
-			string groupsNew = "";
 			ProjectileBan b = GetBanById(id);
 			if (b != null)
 			{
-					try
+				try
 				{
-					groupsNew = String.Join(",", b.AllowedGroups);
+					string groupsNew = string.Join(",", b.AllowedGroups);
 					if (groupsNew.Length > 0)
 						groupsNew += ",";
 					groupsNew += name;
@@ -193,10 +183,7 @@ namespace TShockAPI.DB
 			AllowedGroups = new List<string>();
 		}
 
-		public bool Equals(ProjectileBan other)
-		{
-			return ID == other.ID;
-		}
+		public bool Equals(ProjectileBan other) => ID == other.ID;
 
 		public bool HasPermissionToCreateProjectile(TSPlayer ply)
 		{
@@ -229,12 +216,12 @@ namespace TShockAPI.DB
 			// could add in the other permissions in this class instead of a giant if switch.
 		}
 
-		public void SetAllowedGroups(String groups)
+		public void SetAllowedGroups(string groups)
 		{
 			// prevent null pointer exceptions
 			if (!string.IsNullOrEmpty(groups))
 			{
-				List<String> groupArr = groups.Split(',').ToList();
+				List<string> groupArr = groups.Split(',').ToList();
 
 				for (int i = 0; i < groupArr.Count; i++)
 				{
@@ -245,14 +232,8 @@ namespace TShockAPI.DB
 			}
 		}
 
-		public bool RemoveGroup(string groupName)
-		{
-			return AllowedGroups.Remove(groupName);
-		}
+		public bool RemoveGroup(string groupName) => AllowedGroups.Remove(groupName);
 
-		public override string ToString()
-		{
-			return ID + (AllowedGroups.Count > 0 ? " (" + String.Join(",", AllowedGroups) + ")" : "");
-		}
+		public override string ToString() => ID + (AllowedGroups.Count > 0 ? $" ({string.Join(",", AllowedGroups)})" : "");
 	}
 }

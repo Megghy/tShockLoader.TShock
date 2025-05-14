@@ -63,7 +63,7 @@ namespace TShockAPI
 		/// <summary>VersionNum - The version number the TerrariaAPI will return back to the API. We just use the Assembly info.</summary>
 		public static readonly Version VersionNum = Assembly.GetExecutingAssembly().GetName().Version;
 		/// <summary>VersionCodename - The version codename is displayed when the server starts. Inspired by software codenames conventions.</summary>
-		public static readonly string VersionCodename = "Stargazer";
+		public static readonly string VersionCodename = "Hopefully SSC works somewhat correctly now edition";
 
 		/// <summary>SavePath - This is the path TShock saves its data in. This path is relative to the TerrariaServer.exe (not in ServerPlugins).</summary>
 		public static string SavePath = "tshock";
@@ -314,37 +314,9 @@ namespace TShockAPI
 			// Further exceptions are written to TShock's log from now on.
 			try
 			{
-				if (Config.Settings.StorageType.ToLower() == "sqlite")
-				{
-					string sql = Path.Combine(SavePath, Config.Settings.SqliteDBPath);
-					Directory.CreateDirectory(Path.GetDirectoryName(sql));
-					DB = new Microsoft.Data.Sqlite.SqliteConnection(string.Format("Data Source={0}", sql));
-				}
-				else if (Config.Settings.StorageType.ToLower() == "mysql")
-				{
-					try
-					{
-						var hostport = Config.Settings.MySqlHost.Split(':');
-						DB = new MySqlConnection();
-						DB.ConnectionString =
-							String.Format("Server={0}; Port={1}; Database={2}; Uid={3}; Pwd={4};",
-								hostport[0],
-								hostport.Length > 1 ? hostport[1] : "3306",
-								Config.Settings.MySqlDbName,
-								Config.Settings.MySqlUsername,
-								Config.Settings.MySqlPassword
-								);
-					}
-					catch (MySqlException ex)
-					{
-						ServerApi.LogWriter.PluginWriteLine(this, ex.ToString(), TraceLevel.Error);
-						throw new Exception("MySql not setup correctly");
-					}
-				}
-				else
-				{
-					throw new Exception("Invalid storage type");
-				}
+				// Build database
+				DbBuilder dbBuilder = new(this, Config, SavePath);
+				DB = dbBuilder.BuildDbConnection();
 
 				if (Config.Settings.UseSqlLogs)
 					Log = new SqlLog(DB, logFilename, LogClear);
@@ -428,8 +400,6 @@ namespace TShockAPI
 				Hooks.AccountHooks.AccountDelete += OnAccountDelete;
 				Hooks.AccountHooks.AccountCreate += OnAccountCreate;
 
-				On.Terraria.RemoteClient.Reset += RemoteClient_Reset;
-
 				GetDataHandlers.InitGetDataHandler();
 				Commands.InitCommands();
 
@@ -449,7 +419,7 @@ namespace TShockAPI
 					// Initialize the AchievementManager, which is normally only done on clients.
 					Game._achievements = new AchievementManager();
 
-					IL.Terraria.Initializers.AchievementInitializer.Load += OnAchievementInitializerLoad;
+					OTAPI.Hooks.Initializers.AchievementInitializerLoad += OnAchievementInitializerLoad;
 
 					// Actually call AchievementInitializer.Load, which is also normally only done on clients.
 					AchievementInitializer.Load();
@@ -498,17 +468,9 @@ namespace TShockAPI
 			}
 		}
 
-		private static void RemoteClient_Reset(On.Terraria.RemoteClient.orig_Reset orig, RemoteClient client)
+		private static void OnAchievementInitializerLoad(object sender, OTAPI.Hooks.Initializers.AchievementInitializerLoadEventArgs args)
 		{
-			client.ClientUUID = null;
-			orig(client);
-		}
-
-		private static void OnAchievementInitializerLoad(ILContext il)
-		{
-			// Modify AchievementInitializer.Load to remove the Main.netMode == 2 check (occupies the first 4 IL instructions)
-			for (var i = 0; i < 4; i++)
-				il.Body.Instructions.RemoveAt(0);
+			args.ShouldLoad = true;
 		}
 
 		protected void CrashReporter_HeapshotRequesting(object sender, EventArgs e)
@@ -532,7 +494,7 @@ namespace TShockAPI
 				}
 				SaveManager.Instance.Dispose();
 
-				IL.Terraria.Initializers.AchievementInitializer.Load -= OnAchievementInitializerLoad;
+				OTAPI.Hooks.Initializers.AchievementInitializerLoad -= OnAchievementInitializerLoad;
 
 				ModuleManager.Dispose();
 
@@ -1469,8 +1431,8 @@ namespace TShockAPI
 				Hooks.PlayerHooks.OnPlayerLogout(tsplr);
 			}
 
-			// The last player will leave after this hook is executed.
-			if (Utils.GetActivePlayerCount() == 1)
+			// If this is the last player online, update the console title and save the world if needed
+			if (Utils.GetActivePlayerCount() == 0)
 			{
 				if (Config.Settings.SaveWorldOnLastPlayerExit)
 					SaveManager.Instance.SaveWorld();
