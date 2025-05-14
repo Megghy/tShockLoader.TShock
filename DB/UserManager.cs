@@ -25,6 +25,7 @@ using MySql.Data.MySqlClient;
 using System.Text.RegularExpressions;
 using BCrypt.Net;
 using System.Security.Cryptography;
+using TShockAPI.DB.Queries;
 using TShockAPI.Hooks;
 
 namespace TShockAPI.DB
@@ -52,10 +53,8 @@ namespace TShockAPI.DB
 				new SqlColumn("LastAccessed", MySqlDbType.Text),
 				new SqlColumn("KnownIPs", MySqlDbType.Text)
 				);
-			var creator = new SqlTableCreator(db,
-				db.GetSqlType() == SqlType.Sqlite
-				? (IQueryBuilder) new SqliteQueryCreator()
-				: new MysqlQueryCreator());
+
+			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
 			creator.EnsureTableStructure(table);
 		}
 
@@ -240,12 +239,10 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				using (var reader = _database.QueryReader("SELECT * FROM Users WHERE Username=@0", username))
+				using var reader = _database.QueryReader("SELECT * FROM Users WHERE Username=@0", username);
+				if (reader.Read())
 				{
-					if (reader.Read())
-					{
-						return reader.Get<int>("ID");
-					}
+					return reader.Get<int>("ID");
 				}
 			}
 			catch (Exception ex)
@@ -309,16 +306,14 @@ namespace TShockAPI.DB
 
 			try
 			{
-				using (var result = _database.QueryReader(query, arg))
+				using var result = _database.QueryReader(query, arg);
+				if (result.Read())
 				{
-					if (result.Read())
-					{
-						account = LoadUserAccountFromResult(account, result);
-						// Check for multiple matches
-						if (!result.Read())
-							return account;
-						multiple = true;
-					}
+					account = LoadUserAccountFromResult(account, result);
+					// Check for multiple matches
+					if (!result.Read())
+						return account;
+					multiple = true;
 				}
 			}
 			catch (Exception ex)
@@ -338,14 +333,12 @@ namespace TShockAPI.DB
 			try
 			{
 				List<UserAccount> accounts = new List<UserAccount>();
-				using (var reader = _database.QueryReader("SELECT * FROM Users"))
+				using var reader = _database.QueryReader("SELECT * FROM Users");
+				while (reader.Read())
 				{
-					while (reader.Read())
-					{
-						accounts.Add(LoadUserAccountFromResult(new UserAccount(), reader));
-					}
-					return accounts;
+					accounts.Add(LoadUserAccountFromResult(new UserAccount(), reader));
 				}
+				return accounts;
 			}
 			catch (Exception ex)
 			{
@@ -366,14 +359,13 @@ namespace TShockAPI.DB
 			{
 				List<UserAccount> accounts = new List<UserAccount>();
 				string search = notAtStart ? string.Format("%{0}%", username) : string.Format("{0}%", username);
-				using (var reader = _database.QueryReader("SELECT * FROM Users WHERE Username LIKE @0",
-					search))
+				using var reader = _database.QueryReader("SELECT * FROM Users WHERE Username LIKE @0",
+					search);
+				while (reader.Read())
 				{
-					while (reader.Read())
-					{
-						accounts.Add(LoadUserAccountFromResult(new UserAccount(), reader));
-					}
+					accounts.Add(LoadUserAccountFromResult(new UserAccount(), reader));
 				}
+
 				return accounts;
 			}
 			catch (Exception ex)
@@ -496,7 +488,7 @@ namespace TShockAPI.DB
 			int currentWorkFactor;
 			try
 			{
-				currentWorkFactor = Int32.Parse((Password.Split('$')[2]));
+				currentWorkFactor = int.Parse((Password.Split('$')[2]));
 			}
 			catch (FormatException)
 			{
