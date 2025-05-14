@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using MySql.Data.MySqlClient;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {
@@ -58,7 +59,9 @@ namespace TShockAPI.DB
 			var columns = GetColumns(table);
 			if (columns.Count > 0)
 			{
-				if (!table.Columns.All(c => columns.Contains(c.Name)) || !columns.All(c => table.Columns.Any(c2 => c2.Name == c)))
+				// Use OrdinalIgnoreCase to account for pgsql automatically lowering cases.
+				if (!table.Columns.All(c => columns.Contains(c.Name, StringComparer.OrdinalIgnoreCase))
+				    || !columns.All(c => table.Columns.Any(c2 => c2.Name.Equals(c, StringComparison.OrdinalIgnoreCase))))
 				{
 					var from = new SqlTable(table.Name, columns.Select(s => new SqlColumn(s, MySqlDbType.String)).ToList());
 					database.Query(creator.AlterTable(from, table));
@@ -69,36 +72,50 @@ namespace TShockAPI.DB
 				database.Query(creator.CreateTable(table));
 				return true;
 			}
+
 			return false;
 		}
 
 		public List<string> GetColumns(SqlTable table)
 		{
-			var ret = new List<string>();
-			var name = database.GetSqlType();
-			if (name == SqlType.Sqlite)
+			List<string> ret = new();
+			switch (database.GetSqlType())
 			{
-				using (var reader = database.QueryReader("PRAGMA table_info({0})".SFormat(table.Name)))
+				case SqlType.Sqlite:
 				{
+					using QueryResult reader = database.QueryReader("PRAGMA table_info({0})".SFormat(table.Name));
 					while (reader.Read())
+					{
 						ret.Add(reader.Get<string>("name"));
+					}
+
+					break;
 				}
-			}
-			else if (name == SqlType.Mysql)
-			{
-				using (
-					var reader =
-						database.QueryReader(
-							"SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_NAME=@0 AND TABLE_SCHEMA=@1", table.Name,
-							database.Database))
+				case SqlType.Mysql:
 				{
+					using QueryResult reader =
+						database.QueryReader("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_NAME=@0 AND TABLE_SCHEMA=@1", table.Name, database.Database);
+
 					while (reader.Read())
+					{
 						ret.Add(reader.Get<string>("COLUMN_NAME"));
+					}
+
+					break;
 				}
-			}
-			else
-			{
-				throw new NotSupportedException();
+				case SqlType.Postgres:
+				{
+					// HACK: Using "ilike" op to ignore case, due to weird case issues adapting for pgsql
+					using QueryResult reader = database.QueryReader("SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name ILIKE @0", table.Name);
+
+					while (reader.Read())
+					{
+						ret.Add(reader.Get<string>("column_name"));
+					}
+
+					break;
+				}
+				default: throw new NotSupportedException();
 			}
 
 			return ret;

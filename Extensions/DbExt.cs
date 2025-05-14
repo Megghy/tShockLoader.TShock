@@ -20,6 +20,10 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Data.Sqlite;
+using MySql.Data.MySqlClient;
+using Npgsql;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {
@@ -38,17 +42,18 @@ namespace TShockAPI.DB
 		[SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
 		public static int Query(this IDbConnection olddb, string query, params object[] args)
 		{
-			using (var db = olddb.CloneEx())
+			using var db = olddb.CloneEx();
+			db.Open();
+
+			using var com = db.CreateCommand();
+			com.CommandText = query;
+
+			for (int i = 0; i < args.Length; i++)
 			{
-				db.Open();
-				using (var com = db.CreateCommand())
-				{
-					com.CommandText = query;
-					for (int i = 0; i < args.Length; i++)
-						com.AddParameter("@" + i, args[i] ?? DBNull.Value);
-					return com.ExecuteNonQuery();
-				}
+				com.AddParameter($"@{i}", args[i] ?? DBNull.Value);
 			}
+
+			return com.ExecuteNonQuery();
 		}
 
 		/// <summary>
@@ -143,15 +148,21 @@ namespace TShockAPI.DB
 			return clone;
 		}
 
-		public static SqlType GetSqlType(this IDbConnection conn)
+		public static SqlType GetSqlType(this IDbConnection conn) => conn switch
 		{
-			var name = conn.GetType().Name;
-			if (name == "SqliteConnection" || name == "SQLiteConnection")
-				return SqlType.Sqlite;
-			if (name == "MySqlConnection")
-				return SqlType.Mysql;
-			return SqlType.Unknown;
-		}
+			SqliteConnection => SqlType.Sqlite,
+			MySqlConnection => SqlType.Mysql,
+			NpgsqlConnection => SqlType.Postgres,
+			_ => SqlType.Unknown
+		};
+
+		public static IQueryBuilder GetSqlQueryBuilder(this IDbConnection db) => db.GetSqlType() switch
+		{
+			SqlType.Sqlite => new SqliteQueryBuilder(),
+			SqlType.Mysql => new MysqlQueryBuilder(),
+			SqlType.Postgres => new PostgresQueryBuilder(),
+			_ => throw new NotSupportedException("Database type not supported.")
+		};
 
 		private static readonly Dictionary<Type, Func<IDataReader, int, object>> ReadFuncs = new Dictionary
 			<Type, Func<IDataReader, int, object>>
@@ -267,7 +278,8 @@ namespace TShockAPI.DB
 	{
 		Unknown,
 		Sqlite,
-		Mysql
+		Mysql,
+		Postgres
 	}
 
 	public class QueryResult : IDisposable

@@ -24,6 +24,7 @@ using System.Linq;
 using MySql.Data.MySqlClient;
 using Terraria;
 using Microsoft.Xna.Framework;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {
@@ -48,10 +49,8 @@ namespace TShockAPI.DB
 									 new SqlColumn("WorldID", MySqlDbType.VarChar, 50) { Unique = true },
 			                         new SqlColumn("Private", MySqlDbType.Text)
 				);
-			var creator = new SqlTableCreator(db,
-			                                  db.GetSqlType() == SqlType.Sqlite
-			                                  	? (IQueryBuilder) new SqliteQueryCreator()
-			                                  	: new MysqlQueryCreator());
+
+			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
 			creator.EnsureTableStructure(table);
 		}
 
@@ -87,16 +86,14 @@ namespace TShockAPI.DB
 		{
 			Warps.Clear();
 
-			using (var reader = database.QueryReader("SELECT * FROM Warps WHERE WorldID = @0",
-				Main.worldID.ToString()))
+			using var reader = database.QueryReader("SELECT * FROM Warps WHERE WorldID = @0",
+				Main.worldID.ToString());
+			while (reader.Read())
 			{
-				while (reader.Read())
-				{
-					Warps.Add(new Warp(
-						new Point(reader.Get<int>("X"), reader.Get<int>("Y")),
-						reader.Get<string>("WarpName"),
-						(reader.Get<string>("Private") ?? "0") != "0"));
-				}
+				Warps.Add(new Warp(
+					new Point(reader.Get<int>("X"), reader.Get<int>("Y")),
+					reader.Get<string>("WarpName"),
+					(reader.Get<string>("Private") ?? "0") != "0"));
 			}
 		}
 
@@ -112,7 +109,7 @@ namespace TShockAPI.DB
 				if (database.Query("DELETE FROM Warps WHERE WarpName = @0 AND WorldID = @1",
 					warpName, Main.worldID.ToString()) > 0)
 				{
-					Warps.RemoveAll(w => String.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase));
+					Warps.RemoveAll(w => string.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase));
 					return true;
 				}
 			}
@@ -130,7 +127,7 @@ namespace TShockAPI.DB
 		/// <returns>The warp, if it exists, or else null.</returns>
 		public Warp Find(string warpName)
 		{
-			return Warps.FirstOrDefault(w => String.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase));
+			return Warps.FirstOrDefault(w => string.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase));
 		}
 
 		/// <summary>
@@ -147,7 +144,7 @@ namespace TShockAPI.DB
 				if (database.Query("UPDATE Warps SET X = @0, Y = @1 WHERE WarpName = @2 AND WorldID = @3",
 					x, y, warpName, Main.worldID.ToString()) > 0)
 				{
-					Warps.Find(w => String.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase)).Position = new Point(x, y);
+					Warps.Find(w => string.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase)).Position = new Point(x, y);
 					return true;
 				}
 			}
@@ -171,7 +168,7 @@ namespace TShockAPI.DB
 				if (database.Query("UPDATE Warps SET Private = @0 WHERE WarpName = @1 AND WorldID = @2",
 					state ? "1" : "0", warpName, Main.worldID.ToString()) > 0)
 				{
-					Warps.Find(w => String.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase)).IsPrivate = state;
+					Warps.Find(w => string.Equals(w.Name, warpName, StringComparison.OrdinalIgnoreCase)).IsPrivate = state;
 					return true;
 				}
 			}

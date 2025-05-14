@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using MySql.Data.MySqlClient;
+using TShockAPI.DB.Queries;
 using TShockAPI.Hooks;
 
 namespace TShockAPI.DB
@@ -38,10 +39,8 @@ namespace TShockAPI.DB
 				new SqlColumn("TileId", MySqlDbType.Int32) { Primary = true },
 				new SqlColumn("AllowedGroups", MySqlDbType.Text)
 				);
-			var creator = new SqlTableCreator(db,
-				db.GetSqlType() == SqlType.Sqlite
-					? (IQueryBuilder)new SqliteQueryCreator()
-					: new MysqlQueryCreator());
+
+			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
 			creator.EnsureTableStructure(table);
 			UpdateBans();
 		}
@@ -50,14 +49,12 @@ namespace TShockAPI.DB
 		{
 			TileBans.Clear();
 
-			using (var reader = database.QueryReader("SELECT * FROM TileBans"))
+			using var reader = database.QueryReader("SELECT * FROM TileBans");
+			while (reader != null && reader.Read())
 			{
-				while (reader != null && reader.Read())
-				{
-					TileBan ban = new TileBan((short)reader.Get<Int32>("TileId"));
-					ban.SetAllowedGroups(reader.Get<string>("AllowedGroups"));
-					TileBans.Add(ban);
-				}
+				TileBan ban = new TileBan((short)reader.Get<int>("TileId"));
+				ban.SetAllowedGroups(reader.Get<string>("AllowedGroups"));
+				TileBans.Add(ban);
 			}
 		}
 
@@ -119,7 +116,7 @@ namespace TShockAPI.DB
 			{
 				try
 				{
-					groupsNew = String.Join(",", b.AllowedGroups);
+					groupsNew = string.Join(",", b.AllowedGroups);
 					if (groupsNew.Length > 0)
 						groupsNew += ",";
 					groupsNew += name;
@@ -229,12 +226,12 @@ namespace TShockAPI.DB
 			// could add in the other permissions in this class instead of a giant if switch.
 		}
 
-		public void SetAllowedGroups(String groups)
+		public void SetAllowedGroups(string groups)
 		{
 			// prevent null pointer exceptions
 			if (!string.IsNullOrEmpty(groups))
 			{
-				List<String> groupArr = groups.Split(',').ToList();
+				List<string> groupArr = groups.Split(',').ToList();
 
 				for (int i = 0; i < groupArr.Count; i++)
 				{
@@ -252,7 +249,7 @@ namespace TShockAPI.DB
 
 		public override string ToString()
 		{
-			return ID + (AllowedGroups.Count > 0 ? " (" + String.Join(",", AllowedGroups) + ")" : "");
+			return ID + (AllowedGroups.Count > 0 ? " (" + string.Join(",", AllowedGroups) + ")" : "");
 		}
 	}
 }
