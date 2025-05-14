@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Terraria;
 using Terraria.ID;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {
@@ -40,10 +41,9 @@ namespace TShockAPI.DB
 									new SqlColumn("AmountSacrificed", MySqlDbType.Int32),
 									new SqlColumn("TimeSacrificed", MySqlDbType.DateTime)
 				);
-			var creator = new SqlTableCreator(db,
-				db.GetSqlType() == SqlType.Sqlite
-					? (IQueryBuilder)new SqliteQueryCreator()
-					: new MysqlQueryCreator());
+
+			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
+
 			try
 			{
 				creator.EnsureTableStructure(table);
@@ -84,15 +84,14 @@ namespace TShockAPI.DB
 	where WorldId = @0
       group by itemId";
 
-			try {
-				using (var reader = database.QueryReader(sql, Main.worldID))
+			try
+			{
+				using var reader = database.QueryReader(sql, Main.worldID);
+				while (reader.Read())
 				{
-					while (reader.Read())
-					{
-						var itemId = reader.Get<Int32>("itemId");
-						var amount = reader.Get<Int32>("totalSacrificed");
-						sacrificedItems[itemId] = amount;
-					}
+					var itemId = reader.Get<int>("itemId");
+					var amount = reader.Get<int>("totalSacrificed");
+					sacrificedItems[itemId] = amount;
 				}
 			}
 			catch (Exception ex)

@@ -21,6 +21,7 @@ using System.Data;
 using MySql.Data.MySqlClient;
 using Terraria;
 using Microsoft.Xna.Framework;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {
@@ -39,10 +40,7 @@ namespace TShockAPI.DB
 			                         new SqlColumn("Y", MySqlDbType.Int32),
 			                         new SqlColumn("WorldID", MySqlDbType.Text)
 				);
-			var creator = new SqlTableCreator(db,
-			                                  db.GetSqlType() == SqlType.Sqlite
-			                                  	? (IQueryBuilder) new SqliteQueryCreator()
-			                                  	: new MysqlQueryCreator());
+			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
 			creator.EnsureTableStructure(table);
 		}
 
@@ -50,19 +48,17 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				using (var reader = database.QueryReader("SELECT * FROM RememberedPos WHERE Name=@0", name))
+				using var reader = database.QueryReader("SELECT * FROM RememberedPos WHERE Name=@0", name);
+				if (reader.Read())
 				{
-					if (reader.Read())
-					{
-						int checkX=reader.Get<int>("X");
-						int checkY=reader.Get<int>("Y");
-						//fix leftover inconsistencies
-						if (checkX==0)
-						   checkX++;
-						if (checkY==0)
-						   checkY++;
-						return new Vector2(checkX, checkY);
-					}
+					int checkX=reader.Get<int>("X");
+					int checkY=reader.Get<int>("Y");
+					//fix leftover inconsistencies
+					if (checkX==0)
+						checkX++;
+					if (checkY==0)
+						checkY++;
+					return new Vector2(checkX, checkY);
 				}
 			}
 			catch (Exception ex)
@@ -79,12 +75,10 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				using (var reader = database.QueryReader("SELECT * FROM RememberedPos WHERE Name=@0 AND IP=@1 AND WorldID=@2", name, IP, Main.worldID.ToString()))
+				using var reader = database.QueryReader("SELECT * FROM RememberedPos WHERE Name=@0 AND IP=@1 AND WorldID=@2", name, IP, Main.worldID.ToString());
+				if (reader.Read())
 				{
-					if (reader.Read())
-					{
-						return new Vector2(reader.Get<int>("X"), reader.Get<int>("Y"));
-					}
+					return new Vector2(reader.Get<int>("X"), reader.Get<int>("Y"));
 				}
 			}
 			catch (Exception ex)

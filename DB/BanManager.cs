@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Data;
 using MySql.Data.MySqlClient;
 using System.Collections.ObjectModel;
+using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
 {
@@ -68,10 +69,9 @@ namespace TShockAPI.DB
 									new SqlColumn("Date", MySqlDbType.Int64),
 									new SqlColumn("Expiration", MySqlDbType.Int64)
 				);
-			var creator = new SqlTableCreator(db,
-				db.GetSqlType() == SqlType.Sqlite
-					? (IQueryBuilder)new SqliteQueryCreator()
-					: new MysqlQueryCreator());
+
+			var creator = new SqlTableCreator(db, db.GetSqlQueryBuilder());
+
 			try
 			{
 				creator.EnsureTableStructure(table);
@@ -105,15 +105,12 @@ namespace TShockAPI.DB
 		/// </summary>
 		public void TryConvertBans()
 		{
-			int res;
-			if (database.GetSqlType() == SqlType.Mysql)
+			int res = database.GetSqlType() switch
 			{
-				res = database.QueryScalar<int>("SELECT COUNT(table_name) FROM information_schema.tables WHERE table_schema = @0 and table_name = 'Bans'", TShock.Config.Settings.MySqlDbName);
-			}
-			else
-			{
-				res = database.QueryScalar<int>("SELECT COUNT(name) FROM sqlite_master WHERE type='table' AND name = 'Bans'");
-			}
+				SqlType.Mysql => database.QueryScalar<int>("SELECT COUNT(table_name) FROM information_schema.tables WHERE table_schema = @0 and table_name = 'Bans'", TShock.Config.Settings.MySqlDbName),
+				SqlType.Sqlite => database.QueryScalar<int>("SELECT COUNT(name) FROM sqlite_master WHERE type='table' AND name = 'Bans'"),
+				SqlType.Postgres => database.QueryScalar<int>("SELECT COUNT(table_name) FROM information_schema.tables WHERE table_name = 'Bans'"),
+			};
 
 			if (res != 0)
 			{
@@ -300,16 +297,13 @@ namespace TShockAPI.DB
 				return new AddBanResult { Message = message };
 			}
 
-			string query = "INSERT INTO PlayerBans (Identifier, Reason, BanningUser, Date, Expiration) VALUES (@0, @1, @2, @3, @4);";
-
-			if (database.GetSqlType() == SqlType.Mysql)
+			string query = "INSERT INTO PlayerBans (Identifier, Reason, BanningUser, Date, Expiration) VALUES (@0, @1, @2, @3, @4)" + database.GetSqlType() switch
 			{
-				query += "SELECT LAST_INSERT_ID();";
-			}
-			else
-			{
-				query += "SELECT CAST(last_insert_rowid() as INT);";
-			}
+			   SqlType.Mysql => /*lang=mysql*/"; SELECT LAST_INSERT_ID();",
+			   SqlType.Sqlite => /*lang=sqlite*/"; SELECT last_insert_rowid();",
+			   SqlType.Postgres => /*lang=postgresql*/"RETURNING \"Identifier\";",
+			   _ => null
+			};
 
 			int ticketId = database.QueryScalar<int>(query, args.Identifier, args.Reason, args.BanningUser, args.BanDateTime.Ticks, args.ExpirationDateTime.Ticks);
 
@@ -361,19 +355,18 @@ namespace TShockAPI.DB
 				return Bans[id];
 			}
 
-			using (var reader = database.QueryReader("SELECT * FROM PlayerBans WHERE TicketNumber=@0", id))
-			{
-				if (reader.Read())
-				{
-					var ticketNumber = reader.Get<int>("TicketNumber");
-					var identifier = reader.Get<string>("Identifier");
-					var reason = reader.Get<string>("Reason");
-					var banningUser = reader.Get<string>("BanningUser");
-					var date = reader.Get<long>("Date");
-					var expiration = reader.Get<long>("Expiration");
+			using var reader = database.QueryReader("SELECT * FROM PlayerBans WHERE TicketNumber=@0", id);
 
-					return new Ban(ticketNumber, identifier, reason, banningUser, date, expiration);
-				}
+			if (reader.Read())
+			{
+				var ticketNumber = reader.Get<int>("TicketNumber");
+				var identifier = reader.Get<string>("Identifier");
+				var reason = reader.Get<string>("Reason");
+				var banningUser = reader.Get<string>("BanningUser");
+				var date = reader.Get<long>("Date");
+				var expiration = reader.Get<long>("Expiration");
+
+				return new Ban(ticketNumber, identifier, reason, banningUser, date, expiration);
 			}
 
 			return null;
@@ -393,19 +386,18 @@ namespace TShockAPI.DB
 				query += $" AND Expiration > {DateTime.UtcNow.Ticks}";
 			}
 
-			using (var reader = database.QueryReader(query, identifier))
-			{
-				while (reader.Read())
-				{
-					var ticketNumber = reader.Get<int>("TicketNumber");
-					var ident = reader.Get<string>("Identifier");
-					var reason = reader.Get<string>("Reason");
-					var banningUser = reader.Get<string>("BanningUser");
-					var date = reader.Get<long>("Date");
-					var expiration = reader.Get<long>("Expiration");
+			using var reader = database.QueryReader(query, identifier);
 
-					yield return new Ban(ticketNumber, ident, reason, banningUser, date, expiration);
-				}
+			while (reader.Read())
+			{
+				var ticketNumber = reader.Get<int>("TicketNumber");
+				var ident = reader.Get<string>("Identifier");
+				var reason = reader.Get<string>("Reason");
+				var banningUser = reader.Get<string>("BanningUser");
+				var date = reader.Get<long>("Date");
+				var expiration = reader.Get<long>("Expiration");
+
+				yield return new Ban(ticketNumber, ident, reason, banningUser, date, expiration);
 			}
 		}
 
@@ -418,27 +410,27 @@ namespace TShockAPI.DB
 		public IEnumerable<Ban> GetBansByIdentifiers(bool currentOnly = true, params string[] identifiers)
 		{
 			//Generate a sequence of '@0, @1, @2, ... etc'
-			var parameters = string.Join(", ", Enumerable.Range(0, identifiers.Count()).Select(p => $"@{p}"));
+			var parameters = string.Join(", ", Enumerable.Range(0, identifiers.Length).Select(p => $"@{p}"));
 
 			string query = $"SELECT * FROM PlayerBans WHERE Identifier IN ({parameters})";
+
 			if (currentOnly)
 			{
 				query += $" AND Expiration > {DateTime.UtcNow.Ticks}";
 			}
 
-			using (var reader = database.QueryReader(query, identifiers))
-			{
-				while (reader.Read())
-				{
-					var ticketNumber = reader.Get<int>("TicketNumber");
-					var identifier = reader.Get<string>("Identifier");
-					var reason = reader.Get<string>("Reason");
-					var banningUser = reader.Get<string>("BanningUser");
-					var date = reader.Get<long>("Date");
-					var expiration = reader.Get<long>("Expiration");
+			using var reader = database.QueryReader(query, identifiers);
 
-					yield return new Ban(ticketNumber, identifier, reason, banningUser, date, expiration);
-				}
+			while (reader.Read())
+			{
+				var ticketNumber = reader.Get<int>("TicketNumber");
+				var identifier = reader.Get<string>("Identifier");
+				var reason = reader.Get<string>("Reason");
+				var banningUser = reader.Get<string>("BanningUser");
+				var date = reader.Get<long>("Date");
+				var expiration = reader.Get<long>("Expiration");
+
+				yield return new Ban(ticketNumber, identifier, reason, banningUser, date, expiration);
 			}
 		}
 
@@ -457,21 +449,19 @@ namespace TShockAPI.DB
 			List<Ban> banlist = new List<Ban>();
 			try
 			{
-				var orderBy = SortToOrderByMap[sortMethod];
-				using (var reader = database.QueryReader($"SELECT * FROM PlayerBans ORDER BY {orderBy}"))
-				{
-					while (reader.Read())
-					{
-						var ticketNumber = reader.Get<int>("TicketNumber");
-						var identifier = reader.Get<string>("Identifier");
-						var reason = reader.Get<string>("Reason");
-						var banningUser = reader.Get<string>("BanningUser");
-						var date = reader.Get<long>("Date");
-						var expiration = reader.Get<long>("Expiration");
+				using var reader = database.QueryReader($"SELECT * FROM PlayerBans ORDER BY {SortToOrderByMap[sortMethod]}");
 
-						var ban = new Ban(ticketNumber, identifier, reason, banningUser, date, expiration);
-						banlist.Add(ban);
-					}
+				while (reader.Read())
+				{
+					var ticketNumber = reader.Get<int>("TicketNumber");
+					var identifier = reader.Get<string>("Identifier");
+					var reason = reader.Get<string>("Reason");
+					var banningUser = reader.Get<string>("BanningUser");
+					var date = reader.Get<long>("Date");
+					var expiration = reader.Get<long>("Expiration");
+
+					var ban = new Ban(ticketNumber, identifier, reason, banningUser, date, expiration);
+					banlist.Add(ban);
 				}
 			}
 			catch (Exception ex)
@@ -500,7 +490,7 @@ namespace TShockAPI.DB
 			return false;
 		}
 
-		internal Dictionary<BanSortMethod, string> SortToOrderByMap = new Dictionary<BanSortMethod, string>
+		private readonly Dictionary<BanSortMethod, string> SortToOrderByMap = new()
 		{
 			{ BanSortMethod.AddedNewestToOldest, "Date DESC" },
 			{ BanSortMethod.AddedOldestToNewest, "Date ASC" },
