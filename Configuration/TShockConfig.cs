@@ -56,7 +56,7 @@ namespace TShockAPI.Configuration
 		public bool IgnoreChestStacksOnLoad = false;
 
 		/// <summary>Allows changing of the default world tile provider.</summary>
-		[Description("Allows changing of the default world tile provider.")]
+		[Description("Allows changing of the default world tile provider. By default, you can use 'default', 'heaptile' or 'constileation'. Alternative providers have different CPU and memory usage characteristics.")]
 		public string WorldTileProvider = "constileation";
 
 		#endregion
