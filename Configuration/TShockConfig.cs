@@ -387,7 +387,7 @@ namespace TShockAPI.Configuration
 
 		/// <summary>Kick clients that don't send their UUID to the server.</summary>
 		[Description("Kick clients that don't send their UUID to the server.")]
-		public bool KickEmptyUUID;
+		public bool KickEmptyUUID = true;
 
 		/// <summary>Disables a player if this number of tiles is painted within 1 second.</summary>
 		[Description("Disables a player if this number of tiles is painted within 1 second.")]
