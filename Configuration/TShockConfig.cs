@@ -57,7 +57,7 @@ namespace TShockAPI.Configuration
 
 		/// <summary>Allows changing of the default world tile provider.</summary>
 		[Description("Allows changing of the default world tile provider.")]
-		public string WorldTileProvider = "default";
+		public string WorldTileProvider = "constileation";
 
 		#endregion
 
