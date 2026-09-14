@@ -121,11 +121,9 @@ namespace TShockAPI
 		[JsonProperty("netID")]
 		private int _netId;
 		[JsonProperty("prefix")]
-		private byte _prefixId;
+		private int _prefixId;
 		[JsonProperty("stack")]
 		private int _stack;
-		[JsonProperty("favorited")]
-		private bool _favorited;
 
 		/// <summary>
 		/// Gets the net ID.
@@ -138,7 +136,7 @@ namespace TShockAPI
 		/// <summary>
 		/// Gets the prefix.
 		/// </summary>
-		public byte PrefixId
+		public int PrefixId
 		{
 			get { return _prefixId; }
 		}
@@ -152,26 +150,16 @@ namespace TShockAPI
 		}
 
 		/// <summary>
-		/// Gets the favorited state.
-		/// </summary>
-		public bool Favorited
-		{
-			get { return _favorited; }
-		}
-
-		/// <summary>
 		/// Creates a new <see cref="NetItem"/>.
 		/// </summary>
 		/// <param name="netId">The net ID.</param>
 		/// <param name="stack">The stack.</param>
 		/// <param name="prefixId">The prefix ID.</param>
-		/// <param name="favorited">The favorited state.</param>
-		public NetItem(int netId, int stack = 1, byte prefixId = 0, bool favorited = false)
+		public NetItem(int netId, int stack = 1, int prefixId = 0)
 		{
 			_netId = netId;
 			_stack = stack;
 			_prefixId = prefixId;
-			_favorited = favorited;
 		}
 
 		/// <summary>
@@ -180,10 +168,9 @@ namespace TShockAPI
 		/// <param name="item">Item in the game.</param>
 		public NetItem(Item item)
 		{
-			_netId = item.type;
+			_netId = item.netID;
 			_stack = item.stack;
 			_prefixId = item.prefix;
-			_favorited = item.favorited;
 		}
 
 		/// <summary>
@@ -197,7 +184,6 @@ namespace TShockAPI
 			item.netDefaults(_netId);
 			item.stack = _stack;
 			item.prefix = _prefixId;
-			item.favorited = _favorited;
 
 			return item;
 		}
@@ -208,7 +194,7 @@ namespace TShockAPI
 		/// <returns></returns>
 		public override string ToString()
 		{
-			return String.Format("{0},{1},{2},{3}", _netId, _stack, _prefixId,  _favorited ? 1 : 0);
+			return String.Format("{0},{1},{2}", _netId, _stack, _prefixId);
 		}
 
 		/// <summary>
@@ -224,21 +210,14 @@ namespace TShockAPI
 				throw new ArgumentNullException("str");
 
 			string[] comp = str.Split(',');
-			if (comp.Length < 3)
-				throw new FormatException(GetString("String should contain at least three sections."));
+			if (comp.Length != 3)
+				throw new FormatException("String does not contain three sections.");
 
 			int netId = Int32.Parse(comp[0]);
 			int stack = Int32.Parse(comp[1]);
 			byte prefixId = Byte.Parse(comp[2]);
 
-			bool favorited = false;
-			if (comp.Length > 3)
-			{
-				favorited = int.Parse(comp[3]) == 1;
-			}
-
-
-			return new NetItem(netId, stack, prefixId, favorited);
+			return new NetItem(netId, stack, prefixId);
 		}
 
 		/// <summary>
@@ -250,7 +229,7 @@ namespace TShockAPI
 		{
 			return item == null
 				? new NetItem()
-				: new NetItem(item.type, item.stack, item.prefix, item.favorited);
+				: new NetItem(item.netID, item.stack, item.prefix);
 		}
 	}
 }

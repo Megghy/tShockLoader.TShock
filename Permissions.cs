@@ -172,10 +172,6 @@ namespace TShockAPI
 
 		[Description("Prevents you from being disabled by abnormal MP.")]
 		public static readonly string ignoremp = "tshock.ignore.mp";
-
-
-		[Description("Player can resize chests. Warning: Dangerous permission to grant, very easy to abuse.")]
-		public static readonly string resizechests = "tshock.ignore.resizechests";
 		#endregion
 
 		#region tshock.item nodes
@@ -317,9 +313,6 @@ namespace TShockAPI
 		[Description("User can use the 'lanternsnight' subcommand of the 'worldevent' command")]
 		public static readonly string managelanternsnightevent = "tshock.world.events.lanternsnight";
 
-		[Description("User can use the 'meteorshower' subcommand of the 'worldevent' command")]
-		public static readonly string managemeteorshowerevent = "tshock.world.events.meteorshower";
-
 		[Description("User can change expert state.")]
 		public static readonly string toggleexpert = "tshock.world.toggleexpert";
 
@@ -349,9 +342,6 @@ namespace TShockAPI
 
 		[Description("User can change hardmode state.")]
 		public static readonly string hardmode = "tshock.world.hardmode";
-
-		[Description("User can change world evil.")]
-		public static readonly string switchevil = "tshock.world.switchevil";
 
 		[Description("User can change the homes of NPCs.")]
 		public static readonly string movenpc = "tshock.world.movenpc";

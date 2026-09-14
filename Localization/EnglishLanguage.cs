@@ -77,13 +77,15 @@ namespace TShockAPI.Localization
 				}
 
 				ChatInitializer.Load();
-				foreach (var command in ChatManager.Commands._localizedCommands)
+				dynamic commands = ChatManager.Commands.AsDynamic();
+				foreach (var command in commands._localizedCommands)
 				{
-					if (VanillaCommandsPrefixs.ContainsKey(command.Value._name))
+					string name = command.Value.AsDynamic()._name;
+					if (VanillaCommandsPrefixs.ContainsKey(name))
 						continue;
-					VanillaCommandsPrefixs.Add(command.Value._name,command.Key.Value);
+					VanillaCommandsPrefixs.Add(name, command.Key.Value);
 				}
-				ChatManager.Commands._localizedCommands.Clear();
+				commands._localizedCommands.Clear();
 			}
 			finally
 			{

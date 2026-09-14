@@ -33,9 +33,9 @@ namespace TShockAPI.Handlers.NetModules
 		{
 			INetModuleHandler handler;
 
-			if (NetModulesToHandlersMap.TryGetValue(args.ModuleType, out Type type))
+			if (NetModulesToHandlersMap.ContainsKey(args.ModuleType))
 			{
-				handler = (INetModuleHandler)Activator.CreateInstance(type);
+				handler = (INetModuleHandler)Activator.CreateInstance(NetModulesToHandlersMap[args.ModuleType]);
 			}
 			else
 			{

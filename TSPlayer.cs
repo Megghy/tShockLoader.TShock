@@ -34,8 +34,8 @@ using TShockAPI.Hooks;
 using TShockAPI.Net;
 using Timer = System.Timers.Timer;
 using System.Linq;
-using Terraria.GameContent;
 using Terraria.GameContent.Creative;
+using TerrariaApi.Server;
 namespace TShockAPI
 {
 	/// <summary>
@@ -231,12 +231,12 @@ namespace TShockAPI
 		/// <summary>
 		/// A queue of tiles destroyed by the player for reverting.
 		/// </summary>
-		public Dictionary<Vector2, ITile> TilesDestroyed { get; protected set; }
+		public Dictionary<Vector2, Tile> TilesDestroyed { get; protected set; }
 
 		/// <summary>
 		/// A queue of tiles placed by the player for reverting.
 		/// </summary>
-		public Dictionary<Vector2, ITile> TilesCreated { get; protected set; }
+		public Dictionary<Vector2, Tile> TilesCreated { get; protected set; }
 
 		/// <summary>
 		/// The player's group.
@@ -402,51 +402,6 @@ namespace TShockAPI
 		/// <summary>Determines if the player has finished the handshake (Sent all necessary packets for connection, such as Request World Data, Spawn Player, etc). A normal client would do all of this no problem.</summary>
 		public bool FinishedHandshake = false;
 
-		/// <summary>Determines if the player will be sending a team change packet right after the initial spawn.</summary>
-		public bool InitialTeamChangePending = false;
-
-		/// <summary>Server-side character's recorded death count.</summary>
-		public int sscDeathsPVE = 0;
-
-		/// <summary>Server-side character's recorded PVP death count.</summary>
-		public int sscDeathsPVP = 0;
-
-		/// <summary>
-		/// Gets the player's total death count.
-		/// If server-side characters are enabled and player doesn't have bypass permission,
-		/// returns the server-stored value; otherwise returns the client's value.
-		/// </summary>
-		public int DeathsPVE
-		{
-			get
-			{
-				if (Main.ServerSideCharacter && !this.HasPermission(Permissions.bypassssc))
-				{
-					return sscDeathsPVE;
-				}
-
-				return this.TPlayer.numberOfDeathsPVE;
-			}
-		}
-
-		/// <summary>
-		/// Gets the player's total PVP death count.
-		/// If server-side characters are enabled and player doesn't have bypass permission,
-		/// returns the server-stored value; otherwise returns the client's value.
-		/// </summary>
-		public int DeathsPVP
-		{
-			get
-			{
-				if (Main.ServerSideCharacter && !this.HasPermission(Permissions.bypassssc))
-				{
-					return sscDeathsPVP;
-				}
-
-				return this.TPlayer.numberOfDeathsPVP;
-			}
-		}
-
 		/// <summary>Checks to see if active throttling is happening on events by Bouncer. Rejects repeated events by malicious clients in a short window.</summary>
 		/// <returns>If the player is currently being throttled by Bouncer, or not.</returns>
 		public bool IsBouncerThrottled()
@@ -498,9 +453,9 @@ namespace TShockAPI
 					// From above: this is slots 0-58 in the inventory.
 					// 0-58
 					Item item = new Item();
-					if (inventory[i] != null && inventory[i].type != 0)
+					if (inventory[i] != null && inventory[i].netID != 0)
 					{
-						item.netDefaults(inventory[i].type);
+						item.netDefaults(inventory[i].netID);
 						item.Prefix(inventory[i].prefix);
 						item.AffixName();
 						if (inventory[i].stack > item.maxStack || inventory[i].stack < 0)
@@ -518,9 +473,9 @@ namespace TShockAPI
 					// 59-78
 					var index = i - NetItem.ArmorIndex.Item1;
 					Item item = new Item();
-					if (armor[index] != null && armor[index].type != 0)
+					if (armor[index] != null && armor[index].netID != 0)
 					{
-						item.netDefaults(armor[index].type);
+						item.netDefaults(armor[index].netID);
 						item.Prefix(armor[index].prefix);
 						item.AffixName();
 						if (armor[index].stack > item.maxStack || armor[index].stack < 0)
@@ -538,9 +493,9 @@ namespace TShockAPI
 					// 79-88
 					var index = i - NetItem.DyeIndex.Item1;
 					Item item = new Item();
-					if (dye[index] != null && dye[index].type != 0)
+					if (dye[index] != null && dye[index].netID != 0)
 					{
-						item.netDefaults(dye[index].type);
+						item.netDefaults(dye[index].netID);
 						item.Prefix(dye[index].prefix);
 						item.AffixName();
 						if (dye[index].stack > item.maxStack || dye[index].stack < 0)
@@ -558,9 +513,9 @@ namespace TShockAPI
 					// 89-93
 					var index = i - NetItem.MiscEquipIndex.Item1;
 					Item item = new Item();
-					if (miscEquips[index] != null && miscEquips[index].type != 0)
+					if (miscEquips[index] != null && miscEquips[index].netID != 0)
 					{
-						item.netDefaults(miscEquips[index].type);
+						item.netDefaults(miscEquips[index].netID);
 						item.Prefix(miscEquips[index].prefix);
 						item.AffixName();
 						if (miscEquips[index].stack > item.maxStack || miscEquips[index].stack < 0)
@@ -578,9 +533,9 @@ namespace TShockAPI
 					// 93-98
 					var index = i - NetItem.MiscDyeIndex.Item1;
 					Item item = new Item();
-					if (miscDyes[index] != null && miscDyes[index].type != 0)
+					if (miscDyes[index] != null && miscDyes[index].netID != 0)
 					{
-						item.netDefaults(miscDyes[index].type);
+						item.netDefaults(miscDyes[index].netID);
 						item.Prefix(miscDyes[index].prefix);
 						item.AffixName();
 						if (miscDyes[index].stack > item.maxStack || miscDyes[index].stack < 0)
@@ -598,9 +553,9 @@ namespace TShockAPI
 					// 98-138
 					var index = i - NetItem.PiggyIndex.Item1;
 					Item item = new Item();
-					if (piggy[index] != null && piggy[index].type != 0)
+					if (piggy[index] != null && piggy[index].netID != 0)
 					{
-						item.netDefaults(piggy[index].type);
+						item.netDefaults(piggy[index].netID);
 						item.Prefix(piggy[index].prefix);
 						item.AffixName();
 
@@ -619,9 +574,9 @@ namespace TShockAPI
 					// 138-178
 					var index = i - NetItem.SafeIndex.Item1;
 					Item item = new Item();
-					if (safe[index] != null && safe[index].type != 0)
+					if (safe[index] != null && safe[index].netID != 0)
 					{
-						item.netDefaults(safe[index].type);
+						item.netDefaults(safe[index].netID);
 						item.Prefix(safe[index].prefix);
 						item.AffixName();
 
@@ -639,9 +594,9 @@ namespace TShockAPI
 				{
 					// 178-179
 					Item item = new Item();
-					if (trash != null && trash.type != 0)
+					if (trash != null && trash.netID != 0)
 					{
-						item.netDefaults(trash.type);
+						item.netDefaults(trash.netID);
 						item.Prefix(trash.prefix);
 						item.AffixName();
 
@@ -660,9 +615,9 @@ namespace TShockAPI
 					// 179-220
 					var index = i - NetItem.ForgeIndex.Item1;
 					Item item = new Item();
-					if (forge[index] != null && forge[index].type != 0)
+					if (forge[index] != null && forge[index].netID != 0)
 					{
-						item.netDefaults(forge[index].type);
+						item.netDefaults(forge[index].netID);
 						item.Prefix(forge[index].prefix);
 						item.AffixName();
 
@@ -681,9 +636,9 @@ namespace TShockAPI
 					// 220-260
 					var index = i - NetItem.VoidIndex.Item1;
 					Item item = new Item();
-					if (voidVault[index] != null && voidVault[index].type != 0)
+					if (voidVault[index] != null && voidVault[index].netID != 0)
 					{
-						item.netDefaults(voidVault[index].type);
+						item.netDefaults(voidVault[index].netID);
 						item.Prefix(voidVault[index].prefix);
 						item.AffixName();
 
@@ -701,9 +656,9 @@ namespace TShockAPI
 				{
 					var index = i - NetItem.Loadout1Armor.Item1;
 					Item item = new Item();
-					if (loadout1Armor[index] != null && loadout1Armor[index].type != 0)
+					if (loadout1Armor[index] != null && loadout1Armor[index].netID != 0)
 					{
-						item.netDefaults(loadout1Armor[index].type);
+						item.netDefaults(loadout1Armor[index].netID);
 						item.Prefix(loadout1Armor[index].prefix);
 						item.AffixName();
 
@@ -721,9 +676,9 @@ namespace TShockAPI
 				{
 					var index = i - NetItem.Loadout1Dye.Item1;
 					Item item = new Item();
-					if (loadout1Dye[index] != null && loadout1Dye[index].type != 0)
+					if (loadout1Dye[index] != null && loadout1Dye[index].netID != 0)
 					{
-						item.netDefaults(loadout1Dye[index].type);
+						item.netDefaults(loadout1Dye[index].netID);
 						item.Prefix(loadout1Dye[index].prefix);
 						item.AffixName();
 
@@ -741,9 +696,9 @@ namespace TShockAPI
 				{
 					var index = i - NetItem.Loadout2Armor.Item1;
 					Item item = new Item();
-					if (loadout2Armor[index] != null && loadout2Armor[index].type != 0)
+					if (loadout2Armor[index] != null && loadout2Armor[index].netID != 0)
 					{
-						item.netDefaults(loadout2Armor[index].type);
+						item.netDefaults(loadout2Armor[index].netID);
 						item.Prefix(loadout2Armor[index].prefix);
 						item.AffixName();
 
@@ -761,9 +716,9 @@ namespace TShockAPI
 				{
 					var index = i - NetItem.Loadout2Dye.Item1;
 					Item item = new Item();
-					if (loadout2Dye[index] != null && loadout2Dye[index].type != 0)
+					if (loadout2Dye[index] != null && loadout2Dye[index].netID != 0)
 					{
-						item.netDefaults(loadout2Dye[index].type);
+						item.netDefaults(loadout2Dye[index].netID);
 						item.Prefix(loadout2Dye[index].prefix);
 						item.AffixName();
 
@@ -781,9 +736,9 @@ namespace TShockAPI
 				{
 					var index = i - NetItem.Loadout3Armor.Item1;
 					Item item = new Item();
-					if (loadout3Armor[index] != null && loadout3Armor[index].type != 0)
+					if (loadout3Armor[index] != null && loadout3Armor[index].netID != 0)
 					{
-						item.netDefaults(loadout3Armor[index].type);
+						item.netDefaults(loadout3Armor[index].netID);
 						item.Prefix(loadout3Armor[index].prefix);
 						item.AffixName();
 
@@ -801,9 +756,9 @@ namespace TShockAPI
 				{
 					var index = i - NetItem.Loadout3Dye.Item1;
 					Item item = new Item();
-					if (loadout3Dye[index] != null && loadout3Dye[index].type != 0)
+					if (loadout3Dye[index] != null && loadout3Dye[index].netID != 0)
 					{
-						item.netDefaults(loadout3Dye[index].type);
+						item.netDefaults(loadout3Dye[index].netID);
 						item.Prefix(loadout3Dye[index].prefix);
 						item.AffixName();
 
@@ -997,8 +952,9 @@ namespace TShockAPI
 			{
 				foreach (Point p in IceTiles)
 				{
+					var tile = Main.tile[p.X, p.Y];
 					// If they're trying to kill ice or dirt, and the tile was in the list, we allow it.
-					if (p.X == x && p.Y == y && (Main.tile[p.X, p.Y].type == TileID.Dirt || Main.tile[p.X, p.Y].type == TileID.MagicalIceBlock))
+					if (p.X == x && p.Y == y && (tile.TileType == TileID.Dirt || tile.TileType == TileID.MagicalIceBlock))
 					{
 						IceTiles.Remove(p);
 						return true;
@@ -1110,7 +1066,7 @@ namespace TShockAPI
 		/// </summary>
 		public string UUID
 		{
-			get { return RealPlayer ? Client.ClientUUID : ""; }
+			get { return RealPlayer ? ServerApi.ClientUUID[Index] : ""; }
 		}
 
 		/// <summary>
@@ -1249,7 +1205,7 @@ namespace TShockAPI
 		public bool Hostile => TPlayer.hostile;
 
 		/// <summary>
-		/// Gets the player's X coordinate. May be influenced by mounts.
+		/// Gets the player's X coordinate.
 		/// </summary>
 		public float X
 		{
@@ -1257,39 +1213,7 @@ namespace TShockAPI
 		}
 
 		/// <summary>
-		/// Gets the player's X coordinate without mount influence.
-		/// </summary>
-		public float UnmountedX
-		{
-			get { return RealPlayer ? TPlayer.Center.X - 10 : Main.spawnTileX * 16; }
-		}
-
-		/// <summary>
-		/// Gets the player's centered X coordinate. Not influenced by mounts.
-		/// </summary>
-		public float CenterX
-		{
-			get { return RealPlayer ? TPlayer.Center.X : Main.spawnTileX * 16; }
-		}
-
-		/// <summary>
-		/// Gets the player's right X coordinate. May be influenced by mounts.
-		/// </summary>
-		public float RightX
-		{
-			get { return RealPlayer ? TPlayer.Right.X : Main.spawnTileX * 16; }
-		}
-
-		/// <summary>
-		/// Gets the player's right X coordinate without mount influence.
-		/// </summary>
-		public float UnmountedRightX
-		{
-			get { return RealPlayer ? TPlayer.Center.X + 10 : Main.spawnTileX * 16; }
-		}
-
-		/// <summary>
-		/// Gets the player's Y coordinate. May be influenced by mounts.
+		/// Gets the player's Y coordinate.
 		/// </summary>
 		public float Y
 		{
@@ -1297,39 +1221,7 @@ namespace TShockAPI
 		}
 
 		/// <summary>
-		/// Gets the player's Y coordinate without mount influence.
-		/// </summary>
-		public float UnmountedY
-		{
-			get { return RealPlayer ? TPlayer.Bottom.Y - 42 : Main.spawnTileY * 16; }
-		}
-
-		/// <summary>
-		/// Gets the player's centered Y coordinate. May be influenced by mounts.
-		/// </summary>
-		public float CenterY
-		{
-			get { return RealPlayer ? TPlayer.Center.Y : Main.spawnTileY * 16; }
-		}
-
-		/// <summary>
-		/// Gets the player's centered Y coordinate without mount influence.
-		/// </summary>
-		public float UnmountedCenterY
-		{
-			get { return RealPlayer ? TPlayer.Bottom.Y - 24 : Main.spawnTileY * 16; }
-		}
-
-		/// <summary>
-		/// Gets the player's bottom Y coordinate. Not influenced by mounts.
-		/// </summary>
-		public float BottomY
-		{
-			get { return RealPlayer ? TPlayer.Bottom.Y : Main.spawnTileY * 16; }
-		}
-
-		/// <summary>
-		/// Player X coordinate divided by 16. Supposed X world coordinate. May be influenced by mounts.
+		/// Player X coordinate divided by 16. Supposed X world coordinate.
 		/// </summary>
 		public int TileX
 		{
@@ -1337,75 +1229,11 @@ namespace TShockAPI
 		}
 
 		/// <summary>
-		/// Player X coordinate divided by 16. Supposed X world coordinate without mount influence.
-		/// </summary>
-		public int UnmountedTileX
-		{
-			get { return (int)(UnmountedX / 16); }
-		}
-
-		/// <summary>
-		/// Player center X coordinate divided by 16. Supposed X world coordinate. 
-		/// </summary>
-		public int CenterTileX
-		{
-			get { return (int)(CenterX / 16); }
-		}
-
-		/// <summary>
-		/// Player right X coordinate divided by 16. Supposed X world coordinate. May be influenced by mounts.
-		/// </summary>
-		public int RightTileX
-		{
-			get { return (int)(RightX / 16); }
-		}
-
-		/// <summary>
-		/// Player right X coordinate divided by 16. Supposed X world coordinate without mount influence.
-		/// </summary>
-		public int UnmountedRightTileX
-		{
-			get { return (int)(UnmountedRightX / 16); }
-		}
-
-		/// <summary>
-		/// Player Y coordinate divided by 16. Supposed Y world coordinate. May be influenced by mounts.
+		/// Player Y coordinate divided by 16. Supposed Y world coordinate.
 		/// </summary>
 		public int TileY
 		{
 			get { return (int)(Y / 16); }
-		}
-
-		/// <summary>
-		/// Player Y coordinate divided by 16. Supposed Y world coordinate without mount influence.
-		/// </summary>
-		public int UnmountedTileY
-		{
-			get { return (int)(UnmountedY / 16); }
-		}
-
-		/// <summary>
-		/// Player center Y coordinate divided by 16. Supposed Y world coordinate. May be influenced by mounts.
-		/// </summary>
-		public int CenterTileY
-		{
-			get { return (int)(CenterY / 16); }
-		}
-
-		/// <summary>
-		/// Player center Y coordinate divided by 16. Supposed Y world coordinate without mount influence.
-		/// </summary>
-		public int UnmountedCenterTileY
-		{
-			get { return (int)(UnmountedCenterY / 16); }
-		}
-
-		/// <summary>
-		/// Player bottom Y coordinate divided by 16. Supposed Y world coordinate. Not influenced by mounts.
-		/// </summary>
-		public int BottomTileY
-		{
-			get { return (int)(BottomY / 16); }
 		}
 
 		/// <summary>
@@ -1420,7 +1248,7 @@ namespace TShockAPI
 				{
 					for (int i = 0; i < 50; i++) //51 is trash can, 52-55 is coins, 56-59 is ammo
 					{
-						if (TPlayer.inventory[i] == null || TPlayer.inventory[i].IsAir || TPlayer.inventory[i].Name == "")
+						if (TPlayer.inventory[i] == null || !TPlayer.inventory[i].active || TPlayer.inventory[i].Name == "")
 						{
 							flag = true;
 							break;
@@ -1525,8 +1353,8 @@ namespace TShockAPI
 		/// <param name="index">The player's index in the.</param>
 		public TSPlayer(int index)
 		{
-			TilesDestroyed = new Dictionary<Vector2, ITile>();
-			TilesCreated = new Dictionary<Vector2, ITile>();
+			TilesDestroyed = new Dictionary<Vector2, Tile>();
+			TilesCreated = new Dictionary<Vector2, Tile>();
 			Index = index;
 			Group = Group.DefaultGroup;
 			IceTiles = new List<Point>();
@@ -1539,8 +1367,8 @@ namespace TShockAPI
 		/// <param name="playerName">The player's name.</param>
 		protected TSPlayer(String playerName)
 		{
-			TilesDestroyed = new Dictionary<Vector2, ITile>();
-			TilesCreated = new Dictionary<Vector2, ITile>();
+			TilesDestroyed = new Dictionary<Vector2, Tile>();
+			TilesCreated = new Dictionary<Vector2, Tile>();
 			Index = -1;
 			FakePlayer = new Player { name = playerName, whoAmI = -1 };
 			Group = Group.DefaultGroup;
@@ -1576,50 +1404,6 @@ namespace TShockAPI
 		}
 
 		/// <summary>
-		/// Teleports the player to the given position in the world.
-		/// </summary>
-		/// <param name="tilePos">The tile position to teleport to.</param>
-		/// <param name="style">The teleportation style.</param>
-		/// <param name="useBottom">If the bottom of the player should be modified instead.</param>
-		/// <returns>True or false.</returns>
-		public bool Teleport(Point tilePos, bool useBottom = false, byte style = 1)
-		{
-			// If we want to teleport the player via their bottom position, we set their bottom then get their position from that.
-			if (useBottom)
-				TPlayer.Bottom = tilePos.ToWorldCoordinates(8, 0);
-
-			return Teleport(X, Y, style);
-		}
-
-		/// <summary>
-		/// Teleports the player to the given position in the world.
-		/// </summary>
-		/// <param name="pos">The position to teleport to.</param>
-		/// <param name="style">The teleportation style.</param>
-		/// <param name="useBottom">If the bottom of the player should be modified instead.</param>
-		/// <returns>True or false.</returns>
-		public bool Teleport(Vector2 pos, bool useBottom = false, byte style = 1)
-		{
-			// If we want to teleport the player via their bottom position, we set their bottom then get their position from that.
-			if (useBottom)
-				TPlayer.Bottom = pos;
-
-			return Teleport(X, Y, style);
-		}
-
-		/// <summary>
-		/// Teleports the player to the given position in the world, centered
-		/// </summary>
-		/// <param name="pos">The position to teleport to.</param>
-		/// <param name="style">The teleportation style.</param>
-		/// <returns>True or false.</returns>
-		public bool TeleportCentered(Vector2 pos, byte style = 1)
-		{
-			TPlayer.Center = pos;
-			return Teleport(X, Y, style);
-		}
-
-		/// <summary>
 		/// Teleports the player to the given coordinates in the world.
 		/// </summary>
 		/// <param name="x">The X coordinate.</param>
@@ -1628,16 +1412,24 @@ namespace TShockAPI
 		/// <returns>True or false.</returns>
 		public bool Teleport(float x, float y, byte style = 1)
 		{
-			x = Math.Clamp(x,
-				640,
-				Main.rightWorld - 640 - TPlayer.width);
-
-			y = Math.Clamp(y,
-				640,
-				Main.bottomWorld - 640 - TPlayer.height);
+			if (x > Main.rightWorld - 992)
+			{
+				x = Main.rightWorld - 992;
+			}
+			if (x < 992)
+			{
+				x = 992;
+			}
+			if (y > Main.bottomWorld - 992)
+			{
+				y = Main.bottomWorld - 992;
+			}
+			if (y < 992)
+			{
+				y = 992;
+			}
 
 			SendTileSquareCentered((int)(x / 16), (int)(y / 16), 15);
-			RemoteClient.CheckSection(Index, new Vector2(x, y));
 			TPlayer.Teleport(new Vector2(x, y), style);
 			NetMessage.SendData((int)PacketTypes.Teleport, -1, -1, NetworkText.Empty, 0, TPlayer.whoAmI, x, y, style);
 			return true;
@@ -1653,36 +1445,14 @@ namespace TShockAPI
 			// NOTE: it is vanilla behaviour to not permanently override the spawnpoint if the bed spawn is broken/invalid
 			int x = TPlayer.SpawnX;
 			int y = TPlayer.SpawnY;
+			var tile = Main.tile[x, y - 1];
 			if ((x == -1 && y == -1) ||
-				!Main.tile[x, y - 1].active() || Main.tile[x, y - 1].type != TileID.Beds || !WorldGen.StartRoomCheck(x, y - 1))
+				!tile.HasTile || tile.TileType != TileID.Beds || !WorldGen.StartRoomCheck(x, y - 1))
 			{
-				if (Main.teamBasedSpawnsSeed && ExtraSpawnPointManager.TryGetExtraSpawnPointForTeam(Team, out var spawnPoint))
-				{
-					x = spawnPoint.X;
-					y = spawnPoint.Y;
-				}
-				else
-				{
-					x = Main.spawnTileX;
-					y = Main.spawnTileY;
-				}
+				x = Main.spawnTileX;
+				y = Main.spawnTileY;
 			}
-			return Teleport(new Point(x, y), true);
-		}
-
-		/// <summary>
-		/// Teleports the player to the world spawn point, or the respective team-bsed spawnpoint if the world uses them.
-		/// </summary>
-		/// <param name="ignoreTeamBasedSpawns">If team-based spawnpoints should be ignored.</param>
-		/// <returns>True or false.</returns>
-		public bool TeleportToWorldSpawn(bool ignoreTeamBasedSpawns = false)
-		{
-			Point p = new Point(Main.spawnTileX, Main.spawnTileY);
-			if (!ignoreTeamBasedSpawns &&
-				Main.teamBasedSpawnsSeed && ExtraSpawnPointManager.TryGetExtraSpawnPointForTeam(Team, out var spawnPoint))
-				p = spawnPoint;
-			
-			return Teleport(p, true);
+			return Teleport(x * 16, y * 16 - 48);
 		}
 
 		/// <summary>
@@ -1711,9 +1481,7 @@ namespace TShockAPI
 		/// <param name="respawnTimer">The respawn timer, will be Player.respawnTimer if parameter is null.</param>
 		/// <param name="numberOfDeathsPVE">The number of deaths PVE, will be TPlayer.numberOfDeathsPVE if parameter is null.</param>
 		/// <param name="numberOfDeathsPVP">The number of deaths PVP, will be TPlayer.numberOfDeathsPVP if parameter is null.</param>
-		/// <param name="team">The team after player spawn.</param>
-		public void Spawn(int tilex, int tiley, PlayerSpawnContext context, int? respawnTimer = null,
-				short? numberOfDeathsPVE = null, short? numberOfDeathsPVP = null, int team = -1)
+		public void Spawn(int tilex, int tiley, PlayerSpawnContext context, int? respawnTimer = null, short? numberOfDeathsPVE = null, short? numberOfDeathsPVP = null)
 		{
 			using (var ms = new MemoryStream())
 			{
@@ -1725,7 +1493,6 @@ namespace TShockAPI
 					RespawnTimer = respawnTimer ?? TShock.Players[Index].RespawnTimer * 60,
 					NumberOfDeathsPVE = numberOfDeathsPVE ?? (short)TPlayer.numberOfDeathsPVE,
 					NumberOfDeathsPVP = numberOfDeathsPVP ?? (short)TPlayer.numberOfDeathsPVP,
-					Team = team == -1 ? TPlayer.team : team,
 					PlayerSpawnContext = context,
 				};
 				msg.PackFull(ms);
@@ -1740,29 +1507,12 @@ namespace TShockAPI
 		/// <param name="owner">The projectile's owner.</param>
 		public void RemoveProjectile(int index, int owner)
 		{
-			int generation = 0;
-			int slot = TShock.Utils.SearchProjectile((short)index, owner);
-			if (slot >= 0 && slot < Main.maxProjectiles)
-				generation = Main.projectile[slot].key.Generation;
-
-			RemoveProjectile(index, owner, generation);
-		}
-
-		/// <summary>
-		/// Removes a projectile whose generation is already known, typically taken from the packet.
-		/// </summary>
-		/// <param name="index">The projectile's identity.</param>
-		/// <param name="owner">The player index of the projectile's owner.</param>
-		/// <param name="generation">Slot-reuse counter from the sender's ProjectileKey.</param>
-		public void RemoveProjectile(int index, int owner, int generation)
-		{
 			using (var ms = new MemoryStream())
 			{
 				var msg = new ProjectileRemoveMsg
 				{
 					Index = (short)index,
-					Owner = (byte)owner,
-					Generation = generation
+					Owner = (byte)owner
 				};
 				msg.PackFull(ms);
 				SendRawData(ms.ToArray());
@@ -1901,7 +1651,7 @@ namespace TShockAPI
 		private Item EmptySentinelItem = new Item();
 
 		private bool Depleted(Item item)
-			=> item.type == 0 || item.stack == 0;
+			=> item.type == ItemID.None || item.stack == 0;
 
 		private void GiveItemDirectly(int type, int stack, int prefix)
 		{
@@ -1929,7 +1679,7 @@ namespace TShockAPI
 				if (Depleted(item = GiveItemDirectly_FillIntoOccupiedSlot(item, slot)))
 					return;
 
-			if (!item.IsACoin && item.useStyle != 0)
+			if (!item.IsACoin && item.useStyle != ItemUseStyleID.None)
 				for (int slot = 0; slot < 10; slot++)
 					if (Depleted(item = GiveItemDirectly_FillEmptyInventorySlot(item, slot)))
 						return;
@@ -1946,7 +1696,7 @@ namespace TShockAPI
 		private void SendItemSlotPacketFor(int slot)
 		{
 			int prefix = this.TPlayer.inventory[slot].prefix;
-			NetMessage.SendData(5, this.Index, -1, null, this.Index, slot, prefix, 0f, 0, 0, 0);
+			NetMessage.SendData(MessageID.SyncEquipment, this.Index, -1, null, this.Index, slot, prefix, 0f, 0, 0, 0);
 		}
 
 		private Item GiveItem_FillAmmo(Item item)
@@ -1970,7 +1720,7 @@ namespace TShockAPI
 		private Item GiveItemDirectly_FillIntoOccupiedSlot(Item item, int slot)
 		{
 			var inv = this.TPlayer.inventory;
-			if (inv[slot].type <= 0 || inv[slot].stack >= inv[slot].maxStack || item.type != inv[slot].type)
+			if (inv[slot].type <= ItemID.None || inv[slot].stack >= inv[slot].maxStack || item.IsNotSameTypePrefixAndStack(inv[slot]))
 				return item;
 
 			if (item.stack + inv[slot].stack <= inv[slot].maxStack)
@@ -1980,7 +1730,7 @@ namespace TShockAPI
 				return EmptySentinelItem;
 			}
 
-			var newItem = item.DeepClone();
+			var newItem = item.Clone();
 			newItem.stack -= inv[slot].maxStack - inv[slot].stack;
 			inv[slot].stack = inv[slot].maxStack;
 			SendItemSlotPacketFor(slot);
@@ -1991,7 +1741,7 @@ namespace TShockAPI
 		private Item GiveItemDirectly_FillEmptyInventorySlot(Item item, int slot)
 		{
 			var inv = this.TPlayer.inventory;
-			if (inv[slot].type != 0)
+			if (inv[slot].type != ItemID.None)
 				return item;
 
 			inv[slot] = item;
@@ -2001,7 +1751,7 @@ namespace TShockAPI
 
 		private void GiveItemByDrop(int type, int stack, int prefix)
 		{
-			int itemIndex = Item.NewItem(new EntitySource_DebugCommand(), (int)X, (int)Y, TPlayer.width, TPlayer.height, type, stack, true, prefix, Terraria.NewItemOwnership.None);
+			int itemIndex = Item.NewItem(new EntitySource_DebugCommand("GiveItemByDrop"), (int)X, (int)Y, TPlayer.width, TPlayer.height, type, stack, true, prefix, true);
 			Main.item[itemIndex].playerIndexTheItemIsReservedFor = this.Index;
 			SendData(PacketTypes.ItemDrop, "", itemIndex, 1);
 			SendData(PacketTypes.ItemOwner, null, itemIndex);
@@ -2204,7 +1954,13 @@ namespace TShockAPI
 		/// <param name="reason">The reason for causing damage to player.</param>
 		public virtual void DamagePlayer(int damage, PlayerDeathReason reason)
 		{
-			NetMessage.SendPlayerHurt(Index, reason, damage, (new Random()).Next(-1, 1), false, false, 0, -1, -1);
+			NetMessage.SendPlayerHurt(Index, new Player.HurtInfo()
+			{
+				Damage = damage,
+				DamageSource = reason,
+				PvP = false,
+				HitDirection = new Random().Next(-1, 1),
+			});
 		}
 
 		/// <summary>
@@ -2231,7 +1987,7 @@ namespace TShockAPI
 		public virtual void SetTeam(int team)
 		{
 			if (team < 0 || team >= Main.teamColor.Length)
-				throw new ArgumentException(GetString("The player's team is not in the range of available."));
+				throw new ArgumentException("The player's team is not in the range of available.");
 			Main.player[Index].team = team;
 			NetMessage.SendData((int)PacketTypes.PlayerTeam, -1, -1, NetworkText.Empty, Index);
 		}

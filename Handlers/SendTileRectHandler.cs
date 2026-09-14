@@ -2,7 +2,6 @@
 using System.IO;
 
 using Terraria;
-using Terraria.GameContent;
 using Terraria.ID;
 
 using TShockAPI.Net;
@@ -189,24 +188,6 @@ namespace TShockAPI.Handlers
 			/// <returns><see langword="true"/>, if the rect matches this operation and the changes have been applied, otherwise <see langword="false"/>.</returns>
 			public MatchResult Matches(TSPlayer player, TileRect rect)
 			{
-				// DeadCellsDisplayJar is a 1x2 rect, but the client sends a 2x2 tile rect; only the first column is relevant.
-				if (TileType == TileID.DeadCellsDisplayJar)
-				{
-					if (rect.Width != 2)
-					{
-						return MatchResult.NotMatched;
-					}
-
-					var newTiles = new NetTile[1, rect.Height];
-
-					for (var y = 0; y < rect.Height; y++)
-					{
-						newTiles[0, y] = rect[0, y];
-					}
-
-					rect = new TileRect(newTiles, rect.X, rect.Y, 1, rect.Height);
-				}
-
 				if (rect.Width != Width || rect.Height != Height)
 				{
 					return MatchResult.NotMatched;
@@ -292,7 +273,7 @@ namespace TShockAPI.Handlers
 				{
 					for (int y = rect.Y; y < rect.Y + rect.Height; y++)
 					{
-						if (Main.tile[x, y].active()) // the client will kill tiles that auto break before placing the object
+						if (Main.tile[x, y].HasTile) // the client will kill tiles that auto break before placing the object
 						{
 							return MatchResult.NotMatched;
 						}
@@ -310,10 +291,11 @@ namespace TShockAPI.Handlers
 				{
 					for (int y = 0; y < rect.Height; y++)
 					{
-						Main.tile[x + rect.X, y + rect.Y].active(active: true);
-						Main.tile[x + rect.X, y + rect.Y].type = rect[x, y].Type;
-						Main.tile[x + rect.X, y + rect.Y].frameX = rect[x, y].FrameX;
-						Main.tile[x + rect.X, y + rect.Y].frameY = rect[x, y].FrameY;
+						var tile = Main.tile[x + rect.X, y + rect.Y];
+						tile.HasTile = true;
+						tile.TileType = rect[x, y].Type;
+						tile.TileFrameX = rect[x, y].FrameX;
+						tile.TileFrameY = rect[x, y].FrameY;
 					}
 				}
 
@@ -326,7 +308,8 @@ namespace TShockAPI.Handlers
 				{
 					for (int y = rect.Y; y < rect.Y + rect.Height; y++)
 					{
-						if (!Main.tile[x, y].active() || Main.tile[x, y].type != TileType)
+						var tile = Main.tile[x, y];
+						if (!tile.HasTile || tile.TileType != TileType)
 						{
 							return MatchResult.NotMatched;
 						}
@@ -337,13 +320,14 @@ namespace TShockAPI.Handlers
 				{
 					for (int y = 0; y < rect.Height; y++)
 					{
+						var tile = Main.tile[x + rect.X, y + rect.Y];
 						if (MaxFrameX != IGNORE_FRAME)
 						{
-							Main.tile[x + rect.X, y + rect.Y].frameX = rect[x, y].FrameX;
+							tile.TileFrameX = rect[x, y].FrameX;
 						}
 						if (MaxFrameY != IGNORE_FRAME)
 						{
-							Main.tile[x + rect.X, y + rect.Y].frameY = rect[x, y].FrameY;
+							tile.TileFrameY = rect[x, y].FrameY;
 						}
 					}
 				}
@@ -357,7 +341,8 @@ namespace TShockAPI.Handlers
 				{
 					for (int y = rect.Y; y < rect.Y + rect.Height; y++)
 					{
-						if (!Main.tile[x, y].active() || Main.tile[x, y].type != TileType)
+						var tile = Main.tile[x, y];
+						if (!tile.HasTile || tile.TileType != TileType)
 						{
 							return MatchResult.NotMatched;
 						}
@@ -368,11 +353,13 @@ namespace TShockAPI.Handlers
 				{
 					for (int y = 0; y < rect.Height; y++)
 					{
-						Main.tile[x + rect.X, y + rect.Y].active(active: false);
-						Main.tile[x + rect.X, y + rect.Y].frameX = -1;
-						Main.tile[x + rect.X, y + rect.Y].frameY = -1;
+						var tile = Main.tile[x + rect.X, y + rect.Y];
+						tile.HasTile = false;
+						tile.TileFrameX = -1;
+						tile.TileFrameY = -1;
 					}
 				}
+
 				return MatchResult.BroadcastChanges;
 			}
 		}
@@ -387,16 +374,13 @@ namespace TShockAPI.Handlers
 		private static readonly TileRectMatch[] Matches = new TileRectMatch[]
 		{
 			TileRectMatch.Placement(2, 3, TileID.TargetDummy, 54, 36, 18, 18),
-			TileRectMatch.Placement(3, 4, TileID.TeleportationPylon, (int)TeleportPylonType.Count * 54 - 18, 54, 18, 18),
+			TileRectMatch.Placement(3, 4, TileID.TeleportationPylon, 468, 54, 18, 18),
 			TileRectMatch.Placement(2, 3, TileID.DisplayDoll, 126, 36, 18, 18),
 			TileRectMatch.Placement(3, 4, TileID.HatRack, 90, 54, 18, 18),
 			TileRectMatch.Placement(2, 2, TileID.ItemFrame, 162, 18, 18, 18),
 			TileRectMatch.Placement(3, 3, TileID.WeaponsRack2, 90, 36, 18, 18),
 			TileRectMatch.Placement(1, 1, TileID.FoodPlatter, 18, 0, 18, 18),
 			TileRectMatch.Placement(1, 1, TileID.LogicSensor, 18, 108, 18, 18),
-			TileRectMatch.Placement(1, 1, TileID.KiteAnchor, 72, 0, 18, 18),
-			TileRectMatch.Placement(1, 1, TileID.CritterAnchor, 72, 72, 18, 18),
-			TileRectMatch.Placement(1, 2, TileID.DeadCellsDisplayJar, 36, 18, 18, 18),
 
 			TileRectMatch.StateChangeY(3, 2, TileID.Campfire, 54, 18),
 			TileRectMatch.StateChangeY(4, 3, TileID.Cannon, 468, 18),
@@ -419,7 +403,6 @@ namespace TShockAPI.Handlers
 			TileRectMatch.StateChangeX(1, 1, TileID.ShadowCandle, 18, 18),
 
 			TileRectMatch.StateChange(1, 1, TileID.Traps, 90, 90, 18, 18),
-			TileRectMatch.StateChange(1, 1, TileID.Torches, 110, (short)(TorchID.Count * 22 - 22), 22, 22),
 
 			TileRectMatch.StateChangeX(1, 1, TileID.WirePipe, 36, 18),
 			TileRectMatch.StateChangeX(1, 1, TileID.ProjectilePressurePad, 66, 22),
@@ -496,8 +479,8 @@ namespace TShockAPI.Handlers
 			{
 				TShock.Log.ConsoleDebug(GetString($"Bouncer / SendTileRect reimplemented from {args.Player.Name}"));
 
-				// send to all players and tile frame
-				FrameAndSyncRect(rect);
+				// send correcting data
+				args.Player.SendTileRect(args.TileX, args.TileY, args.Width, args.Length);
 				return;
 			}
 
@@ -516,8 +499,8 @@ namespace TShockAPI.Handlers
 			{
 				TShock.Log.ConsoleDebug(GetString($"Bouncer / SendTileRect reimplemented from {args.Player.Name}"));
 
-				// send to all players and tile frame
-				FrameAndSyncRect(rect);
+				// send correcting data
+				args.Player.SendTileRect(args.TileX, args.TileY, args.Width, args.Length);
 				return;
 			}
 
@@ -532,11 +515,8 @@ namespace TShockAPI.Handlers
 					// send correcting data
 					if (result == TileRectMatch.MatchResult.RejectChanges)
 						args.Player.SendTileRect(args.TileX, args.TileY, args.Width, args.Length);
-
-					// send to all players and tile frame
 					if (result == TileRectMatch.MatchResult.BroadcastChanges)
-						FrameAndSyncRect(rect);
-
+						TSPlayer.All.SendTileRect(args.TileX, args.TileY, args.Width, args.Length);
 					return;
 				}
 			}
@@ -546,8 +526,8 @@ namespace TShockAPI.Handlers
 			{
 				TShock.Log.ConsoleDebug(GetString($"Bouncer / SendTileRect reimplemented from {args.Player.Name}"));
 
-				// send to all players and tile frame
-				FrameAndSyncRect(rect);
+				// send correcting data
+				args.Player.SendTileRect(args.TileX, args.TileY, args.Width, args.Length);
 				return;
 			}
 
@@ -622,12 +602,12 @@ namespace TShockAPI.Handlers
 				return false;
 			}
 
-			ITile oldTile = Main.tile[rect.X, rect.Y];
+			var oldTile = Main.tile[rect.X, rect.Y];
 			NetTile newTile = rect[0, 0];
 
 			WorldGenMock.SimulateConversionChange(rect.X, rect.Y, out HashSet<ushort> validTiles, out HashSet<ushort> validWalls);
 
-			if (newTile.Type != oldTile.type && validTiles.Contains(newTile.Type))
+			if (newTile.Type != oldTile.TileType && validTiles.Contains(newTile.Type))
 			{
 				if (TShock.TileBans.TileIsBanned((short)newTile.Type, player))
 				{
@@ -641,15 +621,15 @@ namespace TShockAPI.Handlers
 				}
 				else
 				{
-					Main.tile[rect.X, rect.Y].type = newTile.Type;
-					Main.tile[rect.X, rect.Y].frameX = newTile.FrameX;
-					Main.tile[rect.X, rect.Y].frameY = newTile.FrameY;
+					Main.tile[rect.X, rect.Y].TileType = newTile.Type;
+					Main.tile[rect.X, rect.Y].TileFrameX = newTile.FrameX;
+					Main.tile[rect.X, rect.Y].TileFrameY = newTile.FrameY;
 
 					return true;
 				}
 			}
 
-			if (newTile.Wall != oldTile.wall && validWalls.Contains(newTile.Wall))
+			if (newTile.Wall != oldTile.WallType && validWalls.Contains(newTile.Wall))
 			{
 				// wallbans when?
 
@@ -660,7 +640,8 @@ namespace TShockAPI.Handlers
 				}
 				else
 				{
-					Main.tile[rect.X, rect.Y].wall = newTile.Wall;
+					var tile = Main.tile[rect.X, rect.Y];
+					tile.WallType = newTile.Wall;
 
 					return true;
 				}
@@ -737,12 +718,12 @@ namespace TShockAPI.Handlers
 				return false;
 			}
 
-			ITile oldTile = Main.tile[rect.X, rect.Y];
+			var oldTile = Main.tile[rect.X, rect.Y];
 			NetTile newTile = rect[0, 0];
 
 			if (
 				PlantToGrassMap.TryGetValue(newTile.Type, out HashSet<ushort> grassTiles) &&
-				!oldTile.active() && grassTiles.Contains(Main.tile[rect.X, rect.Y + 1].type) &&
+				!oldTile.HasTile && grassTiles.Contains(Main.tile[rect.X, rect.Y + 1].TileType) &&
 				GrassToStyleMap[newTile.Type].Contains((ushort)(newTile.FrameX / 18))
 			)
 			{
@@ -758,10 +739,11 @@ namespace TShockAPI.Handlers
 					return true;
 				}
 
-				Main.tile[rect.X, rect.Y].active(active: true);
-				Main.tile[rect.X, rect.Y].type = newTile.Type;
-				Main.tile[rect.X, rect.Y].frameX = newTile.FrameX;
-				Main.tile[rect.X, rect.Y].frameY = 0;
+				var tile = Main.tile[rect.X, rect.Y];
+				tile.HasTile = true;
+				tile.TileType = newTile.Type;
+				tile.TileFrameX = newTile.FrameX;
+				tile.TileFrameY = 0;
 
 				return true;
 			}
@@ -789,10 +771,10 @@ namespace TShockAPI.Handlers
 				return false;
 			}
 
-			ITile oldTile = Main.tile[rect.X, rect.Y];
+			var oldTile = Main.tile[rect.X, rect.Y];
 			NetTile newTile = rect[0, 0];
 
-			if (GrassToMowedMap.TryGetValue(oldTile.type, out ushort mowed) && newTile.Type == mowed)
+			if (GrassToMowedMap.TryGetValue(oldTile.TileType, out ushort mowed) && newTile.Type == mowed)
 			{
 				if (TShock.TileBans.TileIsBanned((short)newTile.Type, player))
 				{
@@ -806,15 +788,16 @@ namespace TShockAPI.Handlers
 					return true;
 				}
 
-				Main.tile[rect.X, rect.Y].type = newTile.Type;
+				Main.tile[rect.X, rect.Y].TileType = newTile.Type;
 				if (!newTile.FrameImportant)
 				{
-					Main.tile[rect.X, rect.Y].frameX = -1;
-					Main.tile[rect.X, rect.Y].frameY = -1;
+					var tile = Main.tile[rect.X, rect.Y];
+					tile.TileFrameX = -1;
+					tile.TileFrameY = -1;
 				}
 
 				// prevent a common crash when the game checks all vines in an unlimited horizontal length
-				if (TileID.Sets.IsVine[Main.tile[rect.X, rect.Y + 1].type])
+				if (TileID.Sets.IsVine[Main.tile[rect.X, rect.Y + 1].TileType])
 				{
 					WorldGen.KillTile(rect.X, rect.Y + 1);
 				}
@@ -840,10 +823,10 @@ namespace TShockAPI.Handlers
 				return false;
 			}
 
-			ITile oldTile = Main.tile[rect.X, rect.Y];
+			var oldTile = Main.tile[rect.X, rect.Y];
 			NetTile newTile = rect[0, 0];
 
-			if (oldTile.type == TileID.ChristmasTree && newTile.Type == TileID.ChristmasTree)
+			if (oldTile.TileType == TileID.ChristmasTree && newTile.Type == TileID.ChristmasTree)
 			{
 				if (newTile.FrameX != 10)
 				{
@@ -872,22 +855,13 @@ namespace TShockAPI.Handlers
 					return true;
 				}
 
-				Main.tile[rect.X, rect.Y].frameY = newTile.FrameY;
+				var tile = Main.tile[rect.X, rect.Y];
+				tile.TileFrameY = newTile.FrameY;
 
 				return true;
 			}
 
 			return false;
-		}
-
-		/// <summary>
-		/// Calls <see cref="WorldGen.RangeFrame(int, int, int, int)"/> and syncs the tile rect to all clients, follwoing vanilla behavior.
-		/// </summary>
-		/// <param name="rect"></param>
-		private static void FrameAndSyncRect(TileRect rect)
-		{
-			WorldGen.RangeFrame(rect.X, rect.Y, rect.X + rect.Width, rect.Y + rect.Height);
-			TSPlayer.All.SendTileRect((short)rect.X, (short)rect.Y, (byte)rect.Width, (byte)rect.Height);
 		}
 	}
 
@@ -951,7 +925,7 @@ namespace TShockAPI.Handlers
 			// all the conversion types used in the code, most apparent in Projectile ai 31
 			foreach (int conversionType in new int[] { 0, 1, 2, 3, 4, 5, 6, 7 })
 			{
-				MockTile mock = new(Main.tile[x, y].type, Main.tile[x, y].wall, validTiles, validWalls);
+				MockTile mock = new(Main.tile[x, y].TileType, Main.tile[x, y].WallType, validTiles, validWalls);
 				Convert(mock, x, y, conversionType);
 			}
 		}
@@ -1104,7 +1078,7 @@ namespace TShockAPI.Handlers
 					{
 						tile.type = 403;
 					}
-					if (type == 59 && (Main.tile[k - 1, l].type == 109 || Main.tile[k + 1, l].type == 109 || Main.tile[k, l - 1].type == 109 || Main.tile[k, l + 1].type == 109))
+					if (type == 59 && (Main.tile[k - 1, l].TileType == 109 || Main.tile[k + 1, l].TileType == 109 || Main.tile[k, l - 1].TileType == 109 || Main.tile[k, l + 1].TileType == 109))
 					{
 						tile.type = 0;
 					}
@@ -1231,9 +1205,9 @@ namespace TShockAPI.Handlers
 					}
 					break;
 				case 7:
-					if ((WallID.Sets.Conversion.Stone[wall] || WallID.Sets.Conversion.Ice[wall] || WallID.Sets.Conversion.Sandstone[wall]) && wall != WallID.StoneUnsafe)
+					if ((WallID.Sets.Conversion.Stone[wall] || WallID.Sets.Conversion.Ice[wall] || WallID.Sets.Conversion.Sandstone[wall]) && wall != 1)
 					{
-						tile.wall = WallID.StoneUnsafe;
+						tile.wall = 1;
 					}
 					else if ((WallID.Sets.Conversion.HardenedSand[wall] || WallID.Sets.Conversion.Snow[wall] || WallID.Sets.Conversion.Dirt[wall]) && wall != 2)
 					{
@@ -1290,9 +1264,9 @@ namespace TShockAPI.Handlers
 					tile.wall = 64;
 				}
 			}
-			else if (WallID.Sets.Conversion.Stone[wall] && wall != WallID.StoneUnsafe && wall != 262 && wall != 274 && wall != 61 && wall != 185)
+			else if (WallID.Sets.Conversion.Stone[wall] && wall != 1 && wall != 262 && wall != 274 && wall != 61 && wall != 185)
 			{
-				tile.wall = WallID.StoneUnsafe;
+				tile.wall = 1;
 			}
 			else if (WallID.Sets.Conversion.Stone[wall] && wall == 262)
 			{

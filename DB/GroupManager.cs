@@ -22,7 +22,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using TShockAPI.DB.Queries;
 
 namespace TShockAPI.DB
@@ -92,37 +92,6 @@ namespace TShockAPI.DB
 						Permissions.summonboss,
 						Permissions.whisper,
 						Permissions.wormhole));
-
-				AddDefaultGroup("insecure-guest", "",
-					string.Join(",",
-						Permissions.canbuild,
-						Permissions.canregister,
-						Permissions.canlogin,
-						Permissions.canpartychat,
-						Permissions.cantalkinthird,
-						Permissions.canchat,
-						Permissions.synclocalarea,
-						Permissions.sendemoji,
-						Permissions.warp,
-						Permissions.summonboss,
-						Permissions.spawnpets,
-						Permissions.worldupgrades,
-						Permissions.startinvasion,
-						Permissions.whisper,
-						Permissions.wormhole,
-						Permissions.canpaint,
-						Permissions.pylon,
-						Permissions.whisper,
-						Permissions.wormhole,
-						Permissions.tppotion,
-						Permissions.magicconch,
-						Permissions.demonconch,
-						Permissions.movenpc,
-						Permissions.worldupgrades,
-						Permissions.rod,
-						Permissions.hurttownnpc,
-						Permissions.startdd2,
-						Permissions.spawnpets));
 
 				AddDefaultGroup("newadmin", "vip",
 					string.Join(",",
@@ -565,7 +534,7 @@ namespace TShockAPI.DB
 			permissions.ForEach(p => group.AddPermission(p));
 
 			if (database.Query("UPDATE GroupList SET Commands=@0 WHERE GroupName=@1", group.Permissions, name) == 1)
-				return GetString($"Group {name} has been modified successfully.");
+				return "Group " + name + " has been modified successfully.";
 
 			// Restore old permissions so DB and internal object are in a consistent state
 			group.Permissions = oldperms;
@@ -588,7 +557,7 @@ namespace TShockAPI.DB
 			permissions.ForEach(p => group.RemovePermission(p));
 
 			if (database.Query("UPDATE GroupList SET Commands=@0 WHERE GroupName=@1", group.Permissions, name) == 1)
-				return GetString($"Group {name} has been modified successfully.");
+				return "Group " + name + " has been modified successfully.";
 
 			// Restore old permissions so DB and internal object are in a consistent state
 			group.Permissions = oldperms;

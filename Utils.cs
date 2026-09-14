@@ -16,19 +16,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
-using Terraria.Utilities;
-using Microsoft.Xna.Framework;
-using Terraria.Localization;
 using TShockAPI.Localization;
 
 namespace TShockAPI
@@ -236,9 +231,9 @@ namespace TShockAPI
 		public bool TileSolid(int tileX, int tileY)
 		{
 			return TilePlacementValid(tileX, tileY) && Main.tile[tileX, tileY] != null &&
-				Main.tile[tileX, tileY].active() && Main.tileSolid[Main.tile[tileX, tileY].type] &&
-				!Main.tile[tileX, tileY].inActive() && !Main.tile[tileX, tileY].halfBrick() &&
-				Main.tile[tileX, tileY].slope() == 0 && Main.tile[tileX, tileY].type != TileID.Bubble;
+				Main.tile[tileX, tileY].HasTile && Main.tileSolid[Main.tile[tileX, tileY].TileType] &&
+				!Main.tile[tileX, tileY].IsActuated && !Main.tile[tileX, tileY].IsHalfBlock &&
+				Main.tile[tileX, tileY].Slope == 0 && Main.tile[tileX, tileY].TileType != TileID.Bubble;
 		}
 
 		/// <summary>
@@ -607,8 +602,6 @@ namespace TShockAPI
 			TShock.ItemBans.DataModel.UpdateItemBans();
 			TShock.ProjectileBans.UpdateBans();
 			TShock.TileBans.UpdateBans();
-			TShock.Bans.UpdateBans();
-			TShock.Whitelist.ReloadFromFile();
 		}
 
 		/// <summary>
@@ -779,38 +772,12 @@ namespace TShockAPI
 		/// <returns>projectile ID</returns>
 		public int SearchProjectile(short identity, int owner)
 		{
-			if (identity < 0 || identity > 1000 || owner < 0 || owner > 255)
-				return 1000;
-
-			int index = Projectile.keyToIndex[owner, identity];
-			if (index < 0 || index >= Main.maxProjectiles)
-				return 1000;
-
-			// keyToIndex is never cleared, so verify the slot still holds this key
-			var key = Main.projectile[index].key;
-			if (key.Spawner == owner && key.Index == identity)
-				return index;
-
+			for (int i = 0; i < Main.maxProjectiles; i++)
+			{
+				if (Main.projectile[i].identity == identity && Main.projectile[i].owner == owner)
+					return i;
+			}
 			return 1000;
-		}
-
-		/// <summary>
-		/// Searches for a projectile by identity, owner and generation.
-		/// </summary>
-		/// <param name="identity">identity</param>
-		/// <param name="owner">owner</param>
-		/// <param name="generation">slot-reuse counter from the sender's ProjectileKey</param>
-		/// <returns>projectile ID</returns>
-		public int SearchProjectile(short identity, int owner, int generation)
-		{
-			int index = SearchProjectile(identity, owner);
-			if (index < 0 || index >= Main.maxProjectiles)
-				return 1000;
-
-			if (Main.projectile[index].key.Generation != generation)
-				return 1000;
-
-			return index;
 		}
 
 		/// <summary>
@@ -958,7 +925,7 @@ namespace TShockAPI
 		/// <returns>The <paramref name="item"/> NetID surrounded by the item tag with proper stack/prefix data.</returns>
 		public string ItemTag(Item item)
 		{
-			int netID = item.type;
+			int netID = item.netID;
 			int stack = item.stack;
 			int prefix = item.prefix;
 			string options = stack > 1 ? "/s" + stack : prefix != 0 ? "/p" + prefix : "";
@@ -1075,8 +1042,8 @@ namespace TShockAPI
 
 		internal void PrepareLangForDump()
 		{
-			for (int i = 0; i < Main.recipe.Length; i++)
-				Main.recipe[i] = new Recipe();
+			/*for (int i = 0; i < Main.recipe.Length; i++)
+				Main.recipe[i] = new Recipe();*/
 		}
 
 		/// <summary>Dumps a matrix of all permissions &amp; all groups in Markdown table format.</summary>
@@ -1084,7 +1051,7 @@ namespace TShockAPI
 		internal void DumpPermissionMatrix(string path)
 		{
 			StringBuilder output = new StringBuilder();
-			output.Append(GetString("|Permission|"));
+			output.Append("|Permission|");
 
 			// Traverse to build group name list
 			foreach (Group g in TShock.Groups.groups)
@@ -1228,6 +1195,54 @@ namespace TShockAPI
 						GetDataHandlers.MaxPlaceStyles.Add(item.createTile, item.placeStyle);
 				}
 			}
+		}
+
+		/// <summary>
+		/// 获取指定静态类中私有静态字段的值。
+		/// </summary>
+		/// <typeparam name="T">字段的类型。</typeparam>
+		/// <param name="staticClassType">静态类的 Type 对象 (e.g., typeof(MyStaticClass))。</param>
+		/// <param name="fieldName">要获取的私有静态字段的名称。</param>
+		/// <returns>私有静态字段的值。</returns>
+		/// <exception cref="ArgumentNullException">当 staticClassType 或 fieldName 为 null 时抛出。</exception>
+		/// <exception cref="ArgumentException">当找不到指定的字段，或者字段不是静态的时抛出。</exception>
+		public static T GetStaticPrivateFieldValue<T>(Type staticClassType, string fieldName)
+		{
+			ArgumentNullException.ThrowIfNull(staticClassType);
+			if (string.IsNullOrEmpty(fieldName))
+			{
+				throw new ArgumentNullException(nameof(fieldName), "Field name cannot be null or empty.");
+			}
+
+			// 确保我们操作的是静态类，或者至少目标字段是静态的
+			// BindingFlags.Static: 指定查找静态成员。
+			// BindingFlags.NonPublic: 指定查找非公共成员（包括 private 和 internal）。
+			FieldInfo fieldInfo = staticClassType.GetField(fieldName, BindingFlags.Static) ?? throw new ArgumentException($"Private static field '{fieldName}' not found in type '{staticClassType.FullName}'. Ensure the field name is correct and it is indeed a static field.");
+
+			// 对于静态字段，GetValue 的第一个参数总是 null。
+			return (T)fieldInfo.GetValue(null);
+		}
+
+		/// <summary>
+		/// 设置指定静态类中私有静态字段的值。
+		/// </summary>
+		/// <param name="staticClassType">静态类的 Type 对象 (e.g., typeof(MyStaticClass))。</param>
+		/// <param name="fieldName">要设置的私有静态字段的名称。</param>
+		/// <param name="value">要设置给字段的新值。</param>
+		/// <exception cref="ArgumentNullException">当 staticClassType 或 fieldName 为 null 时抛出。</exception>
+		/// <exception cref="ArgumentException">当找不到指定的字段，或者字段不是静态的时抛出。</exception>
+		public static void SetStaticPrivateFieldValue(Type staticClassType, string fieldName, object value)
+		{
+			ArgumentNullException.ThrowIfNull(staticClassType);
+			if (string.IsNullOrEmpty(fieldName))
+			{
+				throw new ArgumentNullException(nameof(fieldName), "Field name cannot be null or empty.");
+			}
+
+			FieldInfo fieldInfo = staticClassType.GetField(fieldName, BindingFlags.Static) ?? throw new ArgumentException($"Private static field '{fieldName}' not found in type '{staticClassType.FullName}'. Ensure the field name is correct and it is indeed a static field.");
+
+			// 对于静态字段，SetValue 的第一个参数总是 null。
+			fieldInfo.SetValue(null, value);
 		}
 	}
 }

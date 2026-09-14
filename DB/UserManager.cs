@@ -16,16 +16,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-extern alias BCrypt;
-
 using System;
 using System.Data;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using System.Text.RegularExpressions;
-using BCrypt::BCrypt.Net;
+using BCrypt.Net;
 using System.Security.Cryptography;
 using TShockAPI.DB.Queries;
 using TShockAPI.Hooks;
@@ -467,7 +465,7 @@ namespace TShockAPI.DB
 		{
 			try
 			{
-				if (BCrypt::BCrypt.Net.BCrypt.Verify(password, Password))
+				if (BCrypt.Net.BCrypt.Verify(password, Password))
 				{
 					// If necessary, perform an upgrade to the highest work factor.
 					UpgradePasswordWorkFactor(password);
@@ -522,12 +520,12 @@ namespace TShockAPI.DB
 			}
 			try
 			{
-				Password = BCrypt::BCrypt.Net.BCrypt.HashPassword(password.Trim(), TShock.Config.Settings.BCryptWorkFactor);
+				Password = BCrypt.Net.BCrypt.HashPassword(password.Trim(), TShock.Config.Settings.BCryptWorkFactor);
 			}
 			catch (ArgumentOutOfRangeException)
 			{
 				TShock.Log.ConsoleError(GetString("Invalid BCrypt work factor in config file! Creating new hash using default work factor."));
-				Password = BCrypt::BCrypt.Net.BCrypt.HashPassword(password.Trim());
+				Password = BCrypt.Net.BCrypt.HashPassword(password.Trim());
 			}
 		}
 
@@ -541,7 +539,7 @@ namespace TShockAPI.DB
 				int minLength = TShock.Config.Settings.MinimumPasswordLength;
 				throw new ArgumentOutOfRangeException("password", GetString($"Password must be at least {minLength} characters."));
 			}
-			Password = BCrypt::BCrypt.Net.BCrypt.HashPassword(password.Trim(), workFactor);
+			Password = BCrypt.Net.BCrypt.HashPassword(password.Trim(), workFactor);
 		}
 
 		#region IEquatable

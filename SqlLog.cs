@@ -22,7 +22,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using TShockAPI.DB;
 using TShockAPI.DB.Queries;
 
@@ -67,7 +67,7 @@ namespace TShockAPI
 			_backupLog = new TextLog(textlogFilepath, clearTextLog);
 
 			var table = new SqlTable("Logs",
-				new SqlColumn("ID", MySqlDbType.Int32) {AutoIncrement = true, Primary = true},
+				new SqlColumn("ID", MySqlDbType.Int32) { AutoIncrement = true, Primary = true },
 				new SqlColumn("TimeStamp", MySqlDbType.Text),
 				new SqlColumn("LogLevel", MySqlDbType.Int32),
 				new SqlColumn("Caller", MySqlDbType.Text),
@@ -337,7 +337,7 @@ namespace TShockAPI
 			if (_failures.Count >= TShock.Config.Settings.RevertToTextLogsOnSqlFailures)
 			{
 				_useTextLog = true;
-				_backupLog.ConsoleError(GetString("SQL Logging disabled due to errors. Reverting to text logging."));
+				_backupLog.ConsoleError("SQL Logging disabled due to errors. Reverting to text logging.");
 
 				foreach (var logInfo in _failures)
 				{

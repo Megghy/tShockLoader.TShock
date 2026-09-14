@@ -26,6 +26,7 @@ using TShockAPI.DB;
 using Terraria.Localization;
 using System.Linq;
 using Terraria.DataStructures;
+using TShockAPI.Extensions;
 
 namespace TShockAPI
 {
@@ -166,7 +167,7 @@ namespace TShockAPI
 				int spawnTileY;
 				TShock.Utils.GetRandomClearTileWithInRange(startTileX, startTileY, tileXRange, tileYRange, out spawnTileX,
 															 out spawnTileY);
-				NPC.NewNPC(new EntitySource_DebugCommand(), spawnTileX * 16, spawnTileY * 16, type);
+				NPC.NewNPC(new EntitySource_DebugCommand("SpawnNPC"), spawnTileX * 16, spawnTileY * 16, type);
 			}
 		}
 
@@ -176,16 +177,21 @@ namespace TShockAPI
 			if (Main.rand == null)
 				Main.rand = new UnifiedRandom();
 
-			Main.npc[npcid].StrikeNPC(damage, knockBack, hitDirection);
+			Main.npc[npcid].StrikeNPC(new NPC.HitInfo()
+			{
+				Damage = damage,
+				Knockback = knockBack,
+				HitDirection = hitDirection,
+			});
 			NetMessage.SendData((int)PacketTypes.NpcStrike, -1, -1, NetworkText.Empty, npcid, damage, knockBack, hitDirection);
 		}
 
-		public void RevertTiles(Dictionary<Vector2, ITile> tiles)
+		public void RevertTiles(Dictionary<Vector2, Tile> tiles)
 		{
 			// Update Main.Tile first so that when tile square is sent it is correct
-			foreach (KeyValuePair<Vector2, ITile> entry in tiles)
+			foreach (KeyValuePair<Vector2, Tile> entry in tiles)
 			{
-				Main.tile[(int)entry.Key.X, (int)entry.Key.Y] = entry.Value;
+				Main.tile[(int)entry.Key.X, (int)entry.Key.Y].CopyFrom(entry.Value);
 			}
 			// Send all players updated tile squares
 			foreach (Vector2 coords in tiles.Keys)

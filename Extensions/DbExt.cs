@@ -19,9 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SQLite;
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.Data.Sqlite;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using Npgsql;
 using TShockAPI.DB.Queries;
 
@@ -150,7 +150,7 @@ namespace TShockAPI.DB
 
 		public static SqlType GetSqlType(this IDbConnection conn) => conn switch
 		{
-			SqliteConnection => SqlType.Sqlite,
+			SQLiteConnection => SqlType.Sqlite,
 			MySqlConnection => SqlType.Mysql,
 			NpgsqlConnection => SqlType.Postgres,
 			_ => SqlType.Unknown
@@ -161,7 +161,7 @@ namespace TShockAPI.DB
 			SqlType.Sqlite => new SqliteQueryBuilder(),
 			SqlType.Mysql => new MysqlQueryBuilder(),
 			SqlType.Postgres => new PostgresQueryBuilder(),
-			_ => throw new NotSupportedException(GetString("Database type not supported."))
+			_ => throw new NotSupportedException("Database type not supported.")
 		};
 
 		private static readonly Dictionary<Type, Func<IDataReader, int, object>> ReadFuncs = new Dictionary

@@ -20,7 +20,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Data;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using System.Collections.ObjectModel;
 using TShockAPI.DB.Queries;
 
@@ -82,7 +82,7 @@ namespace TShockAPI.DB
 				throw new Exception(GetString("Could not find a database library (probably Sqlite3.dll)"));
 			}
 
-			UpdateBans();
+			EnsureBansCollection();
 			TryConvertBans();
 
 			OnBanValidate += BanValidateCheck;
@@ -90,11 +90,14 @@ namespace TShockAPI.DB
 		}
 
 		/// <summary>
-		/// Updates the <see cref="_bans"/> collection from database.
+		/// Ensures the <see cref="_bans"/> collection is ready to use.
 		/// </summary>
-		public void UpdateBans()
+		private void EnsureBansCollection()
 		{
-			_bans = RetrieveAllBans().ToDictionary(b => b.TicketNumber);
+			if (_bans == null)
+			{
+				_bans = RetrieveAllBans().ToDictionary(b => b.TicketNumber);
+			}
 		}
 
 		/// <summary>
@@ -296,10 +299,10 @@ namespace TShockAPI.DB
 
 			string query = "INSERT INTO PlayerBans (Identifier, Reason, BanningUser, Date, Expiration) VALUES (@0, @1, @2, @3, @4)" + database.GetSqlType() switch
 			{
-			   SqlType.Mysql => /*lang=mysql*/"; SELECT LAST_INSERT_ID();",
-			   SqlType.Sqlite => /*lang=sqlite*/"; SELECT last_insert_rowid();",
-			   SqlType.Postgres => /*lang=postgresql*/"RETURNING \"Identifier\";",
-			   _ => null
+				SqlType.Mysql => /*lang=mysql*/"; SELECT LAST_INSERT_ID();",
+				SqlType.Sqlite => /*lang=sqlite*/"; SELECT last_insert_rowid();",
+				SqlType.Postgres => /*lang=postgresql*/"RETURNING \"Identifier\";",
+				_ => null
 			};
 
 			int ticketId = database.QueryScalar<int>(query, args.Identifier, args.Reason, args.BanningUser, args.BanDateTime.Ticks, args.ExpirationDateTime.Ticks);

@@ -1,4 +1,4 @@
-﻿/*
+/*
 TShock, a server mod for Terraria
 Copyright (C) 2011-2019 Pryaxis & TShock Contributors
 
@@ -27,29 +27,28 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using MaxMind;
-using MySql.Data.MySqlClient;
+using Microsoft.Xna.Framework;
 using Newtonsoft.Json;
 using Rests;
 using Terraria;
+using Terraria.Achievements;
+using Terraria.Chat;
+using Terraria.GameContent.Creative;
 using Terraria.ID;
+using Terraria.Initializers;
 using Terraria.Localization;
+using Terraria.UI.Chat;
+using Terraria.Utilities;
 using TerrariaApi.Server;
+using TShockAPI.CLI;
+using TShockAPI.Configuration;
 using TShockAPI.DB;
 using TShockAPI.Hooks;
-using Terraria.Utilities;
-using Microsoft.Xna.Framework;
-using TShockAPI.Sockets;
-using TShockAPI.CLI;
 using TShockAPI.Localization;
-using TShockAPI.Configuration;
-using Terraria.GameContent.Creative;
-using System.Runtime.InteropServices;
-using MonoMod.Cil;
-using Terraria.Achievements;
-using Terraria.Initializers;
-using Terraria.UI.Chat;
 using TShockAPI.Modules;
+using TShockAPI.Sockets;
 
 namespace TShockAPI
 {
@@ -61,9 +60,9 @@ namespace TShockAPI
 	public class TShock : TerrariaPlugin
 	{
 		/// <summary>VersionNum - The version number the TerrariaAPI will return back to the API. We just use the Assembly info.</summary>
-		public static readonly Version VersionNum = Assembly.GetExecutingAssembly().GetName().Version;
+		public static readonly Version VersionNum = new(5, 2, 3);
 		/// <summary>VersionCodename - The version codename is displayed when the server starts. Inspired by software codenames conventions.</summary>
-		public static readonly string VersionCodename = "Profoundly Collaborative (3.11)";
+		public static readonly string VersionCodename = "Hopefully SSC works somewhat correctly now edition";
 
 		/// <summary>SavePath - This is the path TShock saves its data in. This path is relative to the TerrariaServer.exe (not in ServerPlugins).</summary>
 		public static string SavePath = "tshock";
@@ -128,12 +127,6 @@ namespace TShockAPI
 		public static ILog Log;
 		/// <summary>instance - Static reference to the TerrariaPlugin instance.</summary>
 		public static TerrariaPlugin instance;
-
-		/// <summary>
-		/// Whitelist - Static reference to the whitelist system, which allows whitelisting of IP addresses and networks.
-		/// </summary>
-		public static Whitelist Whitelist { get; set; }
-
 		/// <summary>
 		/// Static reference to a <see cref="CommandLineParser"/> used for simple command-line parsing
 		/// </summary>
@@ -314,7 +307,7 @@ namespace TShockAPI
 			catch (Exception ex)
 			{
 				// Will be handled by the server api and written to its crashlog.txt.
-				throw new Exception(GetString("Fatal TShock initialization exception. See inner exception for details."), ex);
+				throw new Exception("Fatal TShock initialization exception. See inner exception for details.", ex);
 			}
 
 			// Further exceptions are written to TShock's log from now on.
@@ -360,14 +353,13 @@ namespace TShockAPI
 				Bouncer = new Bouncer();
 				RegionSystem = new RegionHandler(Regions);
 				ItemBans = new ItemBans(this, DB);
-				Whitelist = new(FileTools.WhitelistPath);
 
 				var geoippath = "GeoIP.dat";
 				if (Config.Settings.EnableGeoIP && File.Exists(geoippath))
 					Geo = new GeoIPCountry(geoippath);
 
 				// check if a custom tile provider is to be used
-				switch(Config.Settings.WorldTileProvider?.ToLower())
+				/*switch(Config.Settings.WorldTileProvider?.ToLower())
 				{
 					case "heaptile":
 						Log.ConsoleInfo(GetString($"Using {nameof(HeapTile)} for tile implementation"), TraceLevel.Info);
@@ -377,7 +369,7 @@ namespace TShockAPI
 						Log.ConsoleInfo(GetString($"Using {nameof(ConstileationProvider)} for tile implementation"), TraceLevel.Info);
 						Main.tile = new ConstileationProvider();
 						break;
-				}
+				}*/
 
 				Log.ConsoleInfo(GetString("TShock {0} ({1}) now running.", Version, VersionCodename));
 
@@ -424,9 +416,10 @@ namespace TShockAPI
 				if (Game != null)
 				{
 					// Initialize the AchievementManager, which is normally only done on clients.
-					Game._achievements = new AchievementManager();
+					//Game._achievements = new AchievementManager();
+					Game.AsDynamic()._achievements = new AchievementManager();
 
-					OTAPI.Hooks.Initializers.AchievementInitializerLoad += OnAchievementInitializerLoad;
+					//OTAPI.Hooks.Initializers.AchievementInitializerLoad += OnAchievementInitializerLoad;
 
 					// Actually call AchievementInitializer.Load, which is also normally only done on clients.
 					AchievementInitializer.Load();
@@ -435,8 +428,10 @@ namespace TShockAPI
 				{
 					// If we don't have a Game instance, then we'll just remove the achievement tag handler entirely. This will cause the
 					// raw tag to just be used instead (and not be localized), but still avoid all the issues outlined above.
-					ChatManager._handlers.Remove("a", out _);
-					ChatManager._handlers.Remove("achievement", out _);
+					//ChatManager._handlers.Remove("a", out _);
+					Utils.GetStaticPrivateFieldValue<Dictionary<string, ITagHandler>>(typeof(ChatManager), "_handlers").Remove("a", out _);
+					//ChatManager._handlers.Remove("achievement", out _);
+					Utils.GetStaticPrivateFieldValue<Dictionary<string, ITagHandler>>(typeof(ChatManager), "_handlers").Remove("achievement", out _);
 				}
 
 				ModuleManager.Initialise(new object[] { this });
@@ -467,7 +462,8 @@ namespace TShockAPI
 				{
 					if (Log is not null) Log.ConsoleError(message);
 					else Console.WriteLine(message);
-				};
+				}
+				;
 				SafeError(GetString("TShock encountered a problem from which it cannot recover. The following message may help diagnose the problem."));
 				SafeError(GetString("Until the problem is resolved, TShock will not be able to start (and will crash on startup)."));
 				SafeError(ex.ToString());
@@ -475,10 +471,10 @@ namespace TShockAPI
 			}
 		}
 
-		private static void OnAchievementInitializerLoad(object sender, OTAPI.Hooks.Initializers.AchievementInitializerLoadEventArgs args)
+		/*private static void OnAchievementInitializerLoad(object sender, OTAPI.Hooks.Initializers.AchievementInitializerLoadEventArgs args)
 		{
 			args.ShouldLoad = true;
-		}
+		}*/
 
 		protected void CrashReporter_HeapshotRequesting(object sender, EventArgs e)
 		{
@@ -501,7 +497,7 @@ namespace TShockAPI
 				}
 				SaveManager.Instance.Dispose();
 
-				OTAPI.Hooks.Initializers.AchievementInitializerLoad -= OnAchievementInitializerLoad;
+				//OTAPI.Hooks.Initializers.AchievementInitializerLoad -= OnAchievementInitializerLoad;
 
 				ModuleManager.Dispose();
 
@@ -722,7 +718,7 @@ namespace TShockAPI
 			{
 				if (Main.worldPathName != null && Config.Settings.SaveWorldOnCrash)
 				{
-					Main.ActiveWorldFileData._path += ".crash";
+					Main.ActiveWorldFileData.AsDynamic()._path += ".crash";
 					SaveManager.Instance.SaveWorld();
 				}
 			}
@@ -843,7 +839,7 @@ namespace TShockAPI
 						else
 						{
 							// The server should not start up if this argument is invalid.
-							throw new InvalidOperationException(GetString("Invalid value given for command line argument \"-ip\"."));
+							throw new InvalidOperationException("Invalid value given for command line argument \"-ip\".");
 						}
 					})
 
@@ -871,7 +867,7 @@ namespace TShockAPI
 							worldEvil = 1;
 							break;
 						default:
-							throw new InvalidOperationException(GetString("Invalid value given for command line argument \"-worldevil\"."));
+							throw new InvalidOperationException("Invalid value given for command line argument \"-worldevil\".");
 					}
 
 					ServerApi.LogWriter.PluginWriteLine(this, GetString("New worlds will be generated with the {0} world evil type!", value), TraceLevel.Verbose);
@@ -1065,7 +1061,7 @@ namespace TShockAPI
 			// even if there are no clients connected
 			if (ServerApi.ForceUpdate)
 			{
-				Netplay.HasFullyConnectedClients = true;
+				Netplay.HasClients = true;
 			}
 
 			if (Backups.IsBackupTime)
@@ -1146,8 +1142,6 @@ namespace TShockAPI
 					if (player.TilePlaceThreshold > 0)
 					{
 						player.TilePlaceThreshold = 0;
-						lock (player.TilesCreated)
-							player.TilesCreated.Clear();
 					}
 
 					if (player.RecentFuse > 0)
@@ -1163,34 +1157,6 @@ namespace TShockAPI
 
 						player.TeleportSpawnpoint();
 						TShock.Log.ConsoleDebug(GetString("OnSecondUpdate / initial ssc spawn for {0} at ({1}, {2})", player.Name, player.TPlayer.SpawnX, player.TPlayer.SpawnY));
-					}
-
-					// If a client didn't send a team change within 5 seconds of a pending team change from spawning, they're likely hacking.
-					// So we clear this flag to remove their one-time free team change.
-					if (player.InitialTeamChangePending && (DateTime.UtcNow - player.LastPvPTeamChange).TotalSeconds >= 5)
-						player.InitialTeamChangePending = false;
-
-					// We need to make sure the pvp mode is enforced properly. Maybe this should be moved elsewhere?
-					string pvpMode = Config.Settings.PvPMode.ToLowerInvariant();
-					if (pvpMode != PvPModes.Normal)
-					{
-						if (pvpMode == PvPModes.Disabled && player.TPlayer.hostile) // player shouldn't be in pvp
-						{
-							player.TPlayer.hostile = false;
-							NetMessage.SendData((int)PacketTypes.TogglePvp, -1, -1, null, player.Index);
-						}
-
-						if ((pvpMode == PvPModes.Always || pvpMode == PvPModes.PvPWithNoTeam) && !player.TPlayer.hostile) // player isn't in pvp when they should be
-						{
-							player.TPlayer.hostile = true;
-							NetMessage.SendData((int)PacketTypes.TogglePvp, -1, -1, null, player.Index);
-						}
-
-						if (pvpMode == PvPModes.PvPWithNoTeam && player.Team != PlayerTeamID.None) // player is on a team when they shouldn't be
-						{
-							player.TPlayer.team = PlayerTeamID.None;
-							NetMessage.SendData((int)PacketTypes.PlayerTeam, -1, -1, NetworkText.Empty, player.Index);
-						}
 					}
 
 					if (player.RPPending > 0)
@@ -1300,11 +1266,6 @@ namespace TShockAPI
 		/// <returns>True if allowed, otherwise false</returns>
 		private bool OnCreep(int tileType)
 		{
-			if (WorldGen.generatingWorld)
-			{
-				return true;
-			}
-
 			if (!Config.Settings.AllowCrimsonCreep && (tileType == TileID.Dirt || tileType == TileID.CrimsonGrass
 				|| TileID.Sets.Crimson[tileType]))
 			{
@@ -1359,7 +1320,7 @@ namespace TShockAPI
 				return;
 			}
 
-			if (!Whitelist.IsWhitelisted(player.IP))
+			if (!FileTools.OnWhitelist(player.IP))
 			{
 				player.Kick(Config.Settings.WhitelistKickReason, true, true, null, false);
 				args.Handled = true;
@@ -1427,7 +1388,7 @@ namespace TShockAPI
 
 			//Reset toggle creative powers to default, preventing potential power transfer & desync on another user occupying this slot later.
 
-			foreach (var kv in CreativePowerManager.Instance._powersById)
+			foreach (var kv in CreativePowerManager.Instance.AsDynamic()._powersById)
 			{
 				var power = kv.Value;
 
@@ -1435,10 +1396,10 @@ namespace TShockAPI
 
 				if (power is CreativePowers.APerPlayerTogglePower toggle)
 				{
-					if (toggle._perPlayerIsEnabled[args.Who] == toggle._defaultToggleState)
+					if (toggle.AsDynamic()._perPlayerIsEnabled[args.Who] == toggle.AsDynamic()._defaultToggleState)
 						continue;
 
-					toggle.SetEnabledState(args.Who, toggle._defaultToggleState);
+					toggle.SetEnabledState(args.Who, toggle.AsDynamic()._defaultToggleState);
 				}
 			}
 
@@ -1498,41 +1459,36 @@ namespace TShockAPI
 
 			if (!tsplr.FinishedHandshake)
 			{
-				tsplr.Kick(GetString("Your client didn't send the right connection information."), true, true);
+				tsplr.Kick(GetString("Your client didn't send the right connection information."), true);
 				args.Handled = true;
 				return;
 			}
 
-			var maxLength = Math.Clamp(Config.Settings.MaximumChatMessageLength, 250, 2000);
-			if (args.Text.Length > maxLength && !Config.Settings.TruncateExcessiveChatMessages)
+			if (args.Text.Length > 500)
 			{
-				Log.ConsoleDebug(GetString("TShock / OnChat rejected due to length of {0}/{1} from {2}", args.Text.Length, maxLength, tsplr.Name));
-				tsplr.SendErrorMessage(GetString("Your chat message exceeds the maximum length of {1} characters. ({0}/{1}).", args.Text.Length, maxLength));
+				tsplr.Kick(GetString("Crash attempt via long chat packet."), true);
 				args.Handled = true;
 				return;
 			}
 
-			string text = TruncateChatMessageIfNecessary(args);
-			// We should now use the truncated message instead of the original, we don't want anything to fire off on text that has been "removed"...
-			// Yes, double assignment like this looks bad...
-			var chatText = text;
+			string text = args.Text;
 
 			// Terraria now has chat commands on the client side.
 			// These commands remove the commands prefix (e.g. /me /playing) and send the command id instead
 			// In order for us to keep legacy code we must reverse this and get the prefix using the command id
-			if (!string.IsNullOrEmpty(args.CommandId._name))
+			foreach (KeyValuePair<LocalizedText, ChatCommandId> item in Terraria.UI.Chat.ChatManager.Commands.AsDynamic()._localizedCommands)
 			{
-				var commandPrefix = EnglishLanguage.GetCommandPrefixByName(args.CommandId._name);
-				if (!string.IsNullOrEmpty(commandPrefix))
+				if (item.Value.AsDynamic()._name == args.CommandId.AsDynamic()._name)
 				{
 					if (!String.IsNullOrEmpty(text))
 					{
-						text = commandPrefix + ' ' + text;
+						text = EnglishLanguage.GetCommandPrefixByName(item.Value.AsDynamic()._name) + ' ' + text;
 					}
 					else
 					{
-						text = commandPrefix;
+						text = EnglishLanguage.GetCommandPrefixByName(item.Value.AsDynamic()._name);
 					}
+					break;
 				}
 			}
 
@@ -1569,10 +1525,10 @@ namespace TShockAPI
 				else if (!TShock.Config.Settings.EnableChatAboveHeads)
 				{
 					text = String.Format(Config.Settings.ChatFormat, tsplr.Group.Name, tsplr.Group.Prefix, tsplr.Name, tsplr.Group.Suffix,
-											 chatText);
+											 args.Text);
 
 					//Invoke the PlayerChat hook. If this hook event is handled then we need to prevent sending the chat message
-					bool cancelChat = PlayerHooks.OnPlayerChat(tsplr, chatText, ref text);
+					bool cancelChat = PlayerHooks.OnPlayerChat(tsplr, args.Text, ref text);
 					args.Handled = true;
 
 					if (cancelChat)
@@ -1593,7 +1549,7 @@ namespace TShockAPI
 					//Give that poor player their name back :'c
 					ply.name = name;
 
-					bool cancelChat = PlayerHooks.OnPlayerChat(tsplr, chatText, ref text);
+					bool cancelChat = PlayerHooks.OnPlayerChat(tsplr, args.Text, ref text);
 					if (cancelChat)
 					{
 						args.Handled = true;
@@ -1619,7 +1575,7 @@ namespace TShockAPI
 					//Send the original sender their nicely formatted message, and do all the loggy things
 					tsplr.SendMessage(msg, tsplr.Group.R, tsplr.Group.G, tsplr.Group.B);
 					TSPlayer.Server.SendMessage(msg, tsplr.Group.R, tsplr.Group.G, tsplr.Group.B);
-					Log.Info(GetString("Broadcast: {0}", msg));
+					Log.Info("Broadcast: {0}", msg);
 					args.Handled = true;
 				}
 			}
@@ -1665,40 +1621,6 @@ namespace TShockAPI
 			args.Handled = true;
 		}
 
-		/// <summary>
-		/// Truncates a chat message if it exceeds the <see cref="TShockSettings.MaximumChatMessageLength"/>.
-		/// </summary>
-		/// <param name="args">args - The ServerChatEventArgs object.</param>
-		/// <returns></returns>
-		private string TruncateChatMessageIfNecessary(ServerChatEventArgs args)
-		{
-			string chatMsg = args.Text;
-			var maxLength = Math.Clamp(Config.Settings.MaximumChatMessageLength, 250, 2000);
-			if (chatMsg.Length > maxLength)
-			{
-				Log.ConsoleDebug(GetString("TShock / TruncateChatMessageIfNecessary truncating excessive chat message length of {0}/{1} from {2}", args.Text.Length, maxLength, Players[args.Who].Name));
-				chatMsg = chatMsg.Substring(0, maxLength) + "...";
-			}
-			return chatMsg;
-		}
-
-		private static readonly HashSet<PacketTypes> AllowedEarlyPackets =
-		[
-			PacketTypes.ConnectRequest,
-			PacketTypes.PlayerInfo,
-			PacketTypes.PlayerSlot,
-			PacketTypes.ContinueConnecting2,
-			PacketTypes.TileGetSection,
-			PacketTypes.PlayerSpawn,
-			PacketTypes.PlayerHp,
-			PacketTypes.PlayerMana,
-			PacketTypes.PlayerBuff,
-			PacketTypes.PasswordSend,
-			PacketTypes.ItemDrop,
-			PacketTypes.ItemOwner,
-			PacketTypes.SyncLoadout
-		];
-
 		/// <summary>OnGetData - Called when the server gets raw data packets.</summary>
 		/// <param name="e">e - The GetDataEventArgs object.</param>
 		private void OnGetData(GetDataEventArgs e)
@@ -1721,14 +1643,19 @@ namespace TShockAPI
 				return;
 			}
 
-			if (player.State < (int)ConnectionState.Complete && !AllowedEarlyPackets.Contains(type))
+			if ((player.State < (int)ConnectionState.Complete || player.Dead) && (int)type > 12 && (int)type != 16 && (int)type != 42 && (int)type != 50 &&
+				(int)type != 38 && (int)type != 21 && (int)type != 22 && type != PacketTypes.SyncLoadout)
 			{
 				e.Handled = true;
 				return;
 			}
 
-			int length = Math.Max(e.Length - 1, 0);
-			using (var data = new MemoryStream(e.Msg.readBuffer, e.Index, length))
+			int length = e.Length - 1;
+			if (length < 0)
+			{
+				length = 0;
+			}
+			using (var data = new MemoryStream(e.Msg.readBuffer, e.Index, e.Length - 1))
 			{
 				// Exceptions are already handled
 				e.Handled = GetDataHandlers.HandlerGetData(type, player, data);
@@ -1770,7 +1697,7 @@ namespace TShockAPI
 			player.SendFileTextAsMessage(FileTools.MotdPath);
 
 			string pvpMode = Config.Settings.PvPMode.ToLowerInvariant();
-			if (pvpMode is PvPModes.Always or PvPModes.PvPWithNoTeam)
+			if (pvpMode == "always" || pvpMode == "pvpwithnoteam")
 			{
 				player.TPlayer.hostile = true;
 				player.SendData(PacketTypes.TogglePvp, "", player.Index);
@@ -1890,8 +1817,10 @@ namespace TShockAPI
 		/// <param name="file">file - The config file object.</param>
 		public void OnConfigRead(ConfigFile<TShockSettings> file)
 		{
-			NPC.defaultMaxSpawns = file.Settings.DefaultMaximumSpawns;
-			NPC.defaultSpawnRate = file.Settings.DefaultSpawnRate;
+			//NPC.defaultMaxSpawns = file.Settings.DefaultMaximumSpawns;
+			Utils.SetStaticPrivateFieldValue(typeof(NPC), "defaultMaxSpawns", file.Settings.DefaultMaximumSpawns);
+			//NPC.defaultSpawnRate = file.Settings.DefaultSpawnRate;
+			Utils.SetStaticPrivateFieldValue(typeof(NPC), "defaultSpawnRate", file.Settings.DefaultSpawnRate);
 
 			Main.autoSave = file.Settings.AutoSave;
 			if (Backups != null)

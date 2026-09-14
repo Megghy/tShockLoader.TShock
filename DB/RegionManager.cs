@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using Terraria;
 using Microsoft.Xna.Framework;
 using TShockAPI.DB.Queries;
@@ -43,18 +43,18 @@ namespace TShockAPI.DB
 		{
 			database = db;
 			var table = new SqlTable("Regions",
-									 new SqlColumn("Id", MySqlDbType.Int32) {Primary = true, AutoIncrement = true},
+									 new SqlColumn("Id", MySqlDbType.Int32) { Primary = true, AutoIncrement = true },
 									 new SqlColumn("X1", MySqlDbType.Int32),
 									 new SqlColumn("Y1", MySqlDbType.Int32),
 									 new SqlColumn("width", MySqlDbType.Int32),
 									 new SqlColumn("height", MySqlDbType.Int32),
-									 new SqlColumn("RegionName", MySqlDbType.VarChar, 50) {Unique = true},
+									 new SqlColumn("RegionName", MySqlDbType.VarChar, 50) { Unique = true },
 									 new SqlColumn("WorldID", MySqlDbType.VarChar, 50) { Unique = true },
 									 new SqlColumn("UserIds", MySqlDbType.Text),
 									 new SqlColumn("Protected", MySqlDbType.Int32),
 									 new SqlColumn("Groups", MySqlDbType.Text),
 									 new SqlColumn("Owner", MySqlDbType.VarChar, 50),
-									 new SqlColumn("Z", MySqlDbType.Int32){ DefaultValue = "0" }
+									 new SqlColumn("Z", MySqlDbType.Int32) { DefaultValue = "0" }
 				);
 			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
 			creator.EnsureTableStructure(table);
@@ -84,7 +84,7 @@ namespace TShockAPI.DB
 					string groups = reader.Get<string>("Groups");
 					int z = reader.Get<int>("Z");
 
-					string[] splitids = mergedids.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries);
+					string[] splitids = mergedids.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
 					Region r = new Region(id, new Rectangle(X1, Y1, width, height), name, owner, Protected != 0, Main.worldID.ToString(), z);
 					r.SetAllowedGroups(groups);
@@ -219,7 +219,7 @@ namespace TShockAPI.DB
 			try
 			{
 				database.Query("UPDATE Regions SET Protected = @0 WHERE Id = @1 AND WorldID = @2", state ? 1 : 0, id,
-							   Main.worldID.ToString());
+								 Main.worldID.ToString());
 				var region = GetRegionByID(id);
 				if (region != null)
 				{
@@ -245,7 +245,7 @@ namespace TShockAPI.DB
 			try
 			{
 				database.Query("UPDATE Regions SET Protected=@0 WHERE RegionName=@1 AND WorldID=@2", state ? 1 : 0, name,
-							   Main.worldID.ToString());
+								 Main.worldID.ToString());
 				var region = GetRegionByName(name);
 				if (region != null)
 					region.DisableBuild = state;
@@ -344,7 +344,7 @@ namespace TShockAPI.DB
 			try
 			{
 				using (var reader = database.QueryReader("SELECT X1, Y1, height, width FROM Regions WHERE RegionName=@0 AND WorldID=@1",
-													  regionName, Main.worldID.ToString()))
+														regionName, Main.worldID.ToString()))
 				{
 					if (reader.Read())
 					{
@@ -439,7 +439,7 @@ namespace TShockAPI.DB
 
 				string ids = string.Join(",", r.AllowedIDs);
 				return database.Query("UPDATE Regions SET UserIds=@0 WHERE RegionName=@1 AND WorldID=@2", ids,
-									   regionName, Main.worldID.ToString()) > 0;
+										 regionName, Main.worldID.ToString()) > 0;
 			}
 
 			return false;
@@ -458,7 +458,7 @@ namespace TShockAPI.DB
 				string mergedIDs = string.Empty;
 				using (
 					var reader = database.QueryReader("SELECT UserIds FROM Regions WHERE RegionName=@0 AND WorldID=@1", regionName,
-													  Main.worldID.ToString()))
+														Main.worldID.ToString()))
 				{
 					if (reader.Read())
 						mergedIDs = reader.Get<string>("UserIds");
@@ -476,7 +476,7 @@ namespace TShockAPI.DB
 					mergedIDs = string.Concat(mergedIDs, ",", userIdToAdd);
 
 				int q = database.Query("UPDATE Regions SET UserIds=@0 WHERE RegionName=@1 AND WorldID=@2", mergedIDs,
-									   regionName, Main.worldID.ToString());
+										 regionName, Main.worldID.ToString());
 				foreach (var r in Regions)
 				{
 					if (r.Name == regionName && r.WorldID == Main.worldID.ToString())
@@ -530,7 +530,7 @@ namespace TShockAPI.DB
 			{
 				using var reader = database.QueryReader("SELECT RegionName FROM Regions WHERE WorldID=@0", worldid);
 				while (reader.Read())
-					regions.Add(new Region {Name = reader.Get<string>("RegionName")});
+					regions.Add(new Region { Name = reader.Get<string>("RegionName") });
 			}
 			catch (Exception ex)
 			{
@@ -566,7 +566,7 @@ namespace TShockAPI.DB
 			{
 				region.Owner = newOwner;
 				int q = database.Query("UPDATE Regions SET Owner=@0 WHERE RegionName=@1 AND WorldID=@2", newOwner,
-									   regionName, Main.worldID.ToString());
+										 regionName, Main.worldID.ToString());
 				if (q > 0)
 					return true;
 			}
@@ -584,7 +584,7 @@ namespace TShockAPI.DB
 			string mergedGroups = "";
 			using (
 				var reader = database.QueryReader("SELECT `Groups` FROM Regions WHERE RegionName=@0 AND WorldID=@1", regionName,
-												  Main.worldID.ToString()))
+													Main.worldID.ToString()))
 			{
 				if (reader.Read())
 					mergedGroups = reader.Get<string>("Groups");
@@ -600,7 +600,7 @@ namespace TShockAPI.DB
 			mergedGroups += groupName;
 
 			int q = database.Query("UPDATE Regions SET `Groups`=@0 WHERE RegionName=@1 AND WorldID=@2", mergedGroups,
-								   regionName, Main.worldID.ToString());
+									 regionName, Main.worldID.ToString());
 
 			Region r = GetRegionByName(regionName);
 			if (r != null)
@@ -629,7 +629,7 @@ namespace TShockAPI.DB
 				r.RemoveGroup(group);
 				string groups = string.Join(",", r.AllowedGroups);
 				int q = database.Query("UPDATE Regions SET `Groups`=@0 WHERE RegionName=@1 AND WorldID=@2", groups,
-									   regionName, Main.worldID.ToString());
+										 regionName, Main.worldID.ToString());
 				if (q > 0)
 					return true;
 			}
@@ -668,7 +668,7 @@ namespace TShockAPI.DB
 			try
 			{
 				database.Query("UPDATE Regions SET Z=@0 WHERE RegionName=@1 AND WorldID=@2", z, name,
-							   Main.worldID.ToString());
+								 Main.worldID.ToString());
 
 				var region = GetRegionByName(name);
 				if (region != null)

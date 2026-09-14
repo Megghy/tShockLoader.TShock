@@ -21,7 +21,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using Terraria;
 using Microsoft.Xna.Framework;
 using TShockAPI.DB.Queries;

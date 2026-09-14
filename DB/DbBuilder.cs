@@ -1,9 +1,8 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using System.Diagnostics;
 using System.IO;
-using Microsoft.Data.Sqlite;
-using MySql.Data.MySqlClient;
+using System.Data.SQLite;
+using MySqlConnector;
 using Npgsql;
 using TerrariaApi.Server;
 using TShockAPI.Configuration;
@@ -48,45 +47,28 @@ public sealed class DbBuilder
 			"sqlite" => BuildSqliteConnection(),
 			"mysql" => BuildMySqlConnection(),
 			"postgres" => BuildPostgresConnection(),
-			_ => throw new(GetString("Invalid storage type"))
+			_ => throw new("Invalid storage type")
 		};
 	}
 
-	private SqliteConnection BuildSqliteConnection()
+	private SQLiteConnection BuildSqliteConnection()
 	{
-		try
-		{
-			// Handle first the connection string, if specified.
-			if (_config.Settings.SqliteConnectionString is not (null or ""))
-			{
-				// Use factory to build the string, the path may be relative.
-				SqliteConnectionStringBuilder builder = new(_config.Settings.SqliteConnectionString);
-				builder.DataSource = GetDbFile(builder.DataSource).FullName;
-				return new(builder.ConnectionString);
-			}
+		string dbFilePath = Path.Combine(_savePath, _config.Settings.SqliteDBPath);
 
-			// Fallback to SqliteDBPath setting.
-			string dbFilePath = GetDbFile(_config.Settings.SqliteDBPath).FullName;
-			return new($"Data Source={dbFilePath};");
-		}
-		catch (SqliteException e)
+		if (Path.GetDirectoryName(dbFilePath) is not { } dbDirPath)
 		{
-			ServerApi.LogWriter.PluginWriteLine(_caller, e.ToString(), TraceLevel.Error);
-			throw new("Sqlite not setup correctly", e);
+			throw new DirectoryNotFoundException($"The SQLite database path '{dbFilePath}' could not be found.");
 		}
+
+		Directory.CreateDirectory(dbDirPath);
+
+		return new($"Data Source={dbFilePath}");
 	}
 
 	private MySqlConnection BuildMySqlConnection()
 	{
 		try
 		{
-			// If specified, use the connection string instead of other parameters.
-			if (_config.Settings.MySqlConnectionString is not (null or ""))
-			{
-				MySqlConnectionStringBuilder builder = new(_config.Settings.MySqlConnectionString);
-				return new(builder.ToString());
-			}
-
 			string[] hostport = _config.Settings.MySqlHost.Split(':');
 
 			MySqlConnectionStringBuilder connStrBuilder = new()
@@ -111,13 +93,6 @@ public sealed class DbBuilder
 	{
 		try
 		{
-			// If specified, use the connection string instead of other parameters.
-			if (_config.Settings.PostgresConnectionString is not (null or ""))
-			{
-				NpgsqlConnectionStringBuilder builder = new(_config.Settings.PostgresConnectionString);
-				return new(builder.ToString());
-			}
-
 			string[] hostport = _config.Settings.PostgresHost.Split(':');
 
 			NpgsqlConnectionStringBuilder connStrBuilder = new()
@@ -136,22 +111,5 @@ public sealed class DbBuilder
 			ServerApi.LogWriter.PluginWriteLine(_caller, e.ToString(), TraceLevel.Error);
 			throw new("Postgres not setup correctly", e);
 		}
-	}
-
-	private FileInfo GetDbFile(string path)
-	{
-		FileInfo dbFile = new(Path.IsPathRooted(path) ? path : Path.Combine(_savePath, path));
-
-		if (dbFile.Directory is not { } dbDir)
-		{
-			throw new DirectoryNotFoundException($"The SQLite database path '{path}' could not be found.");
-		}
-
-		if (!dbDir.Exists)
-		{
-			dbDir.Create();
-		}
-
-		return dbFile;
 	}
 }

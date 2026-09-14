@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using TShockAPI.DB.Queries;
 using TShockAPI.Hooks;
 
@@ -36,8 +36,8 @@ namespace TShockAPI.DB
 			database = db;
 
 			var table = new SqlTable("ItemBans",
-			                         new SqlColumn("ItemName", MySqlDbType.VarChar, 50) {Primary = true},
-			                         new SqlColumn("AllowedGroups", MySqlDbType.Text)
+															 new SqlColumn("ItemName", MySqlDbType.VarChar, 50) { Primary = true },
+															 new SqlColumn("AllowedGroups", MySqlDbType.Text)
 				);
 
 			SqlTableCreator creator = new(db, db.GetSqlQueryBuilder());
@@ -65,7 +65,7 @@ namespace TShockAPI.DB
 			try
 			{
 				database.Query("INSERT INTO ItemBans (ItemName, AllowedGroups) VALUES (@0, @1);",
-				               itemname, "");
+											 itemname, "");
 				if (!ItemIsBanned(itemname, null))
 					ItemBans.Add(new ItemBan(itemname));
 			}
@@ -95,7 +95,7 @@ namespace TShockAPI.DB
 		public bool ItemIsBanned(string name, TSPlayer ply)
 		{
 			ItemBan b = GetItemBanByName(name);
-			return b != null &&!b.HasPermissionToUseItem(ply);
+			return b != null && !b.HasPermissionToUseItem(ply);
 		}
 
 		public bool AllowGroup(string item, string name)
@@ -112,7 +112,7 @@ namespace TShockAPI.DB
 					b.SetAllowedGroups(groupsNew);
 
 					int q = database.Query("UPDATE ItemBans SET AllowedGroups=@0 WHERE ItemName=@1", groupsNew,
-					                       item);
+																 item);
 
 					return q > 0;
 				}
@@ -135,7 +135,7 @@ namespace TShockAPI.DB
 					b.RemoveGroup(group);
 					string groups = string.Join(",", b.AllowedGroups);
 					int q = database.Query("UPDATE ItemBans SET AllowedGroups=@0 WHERE ItemName=@1", groups,
-					                       item);
+																 item);
 
 					if (q > 0)
 						return true;

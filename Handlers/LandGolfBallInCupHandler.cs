@@ -102,7 +102,7 @@ namespace TShockAPI.Handlers
 				return;
 			}
 
-			if (!Main.tile[args.TileX, args.TileY].active() && Main.tile[args.TileX, args.TileY].type != TileID.GolfHole)
+			if (!Main.tile[args.TileX, args.TileY].HasTile && Main.tile[args.TileX, args.TileY].TileType != TileID.GolfHole)
 			{
 				TShock.Log.ConsoleDebug(GetString($"LandGolfBallInCupHandler: Tile at packet position X:{args.TileX} Y:{args.TileY} is not a golf hole! - From {args.Player.Name}"));
 				args.Handled = true;

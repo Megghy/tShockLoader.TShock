@@ -19,17 +19,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 global using static TShockAPI.I18n;
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using GetText;
+using Terraria.Initializers;
 using Terraria.Localization;
 
 namespace TShockAPI
 {
 	static class I18n
 	{
+		static readonly Dictionary<int, GameCulture> LegacyCultures =
+			(Dictionary<int, GameCulture>)typeof(GameCulture)
+				.GetField("_legacyCultures", BindingFlags.Static | BindingFlags.NonPublic)!
+				.GetValue(null)!;
+
 		static string TranslationsDirectory => Path.Combine(AppContext.BaseDirectory, "i18n");
 		static CultureInfo TranslationCultureInfo
 		{
@@ -48,13 +55,13 @@ namespace TShockAPI
 
 				if (Terraria.Program.LaunchParameters.TryGetValue("-lang", out var langArg)
 				    && int.TryParse(langArg, out var langId)) {
-					if (GameCulture._legacyCultures.TryGetValue(langId, out var culture)) {
+					if (LegacyCultures.TryGetValue(langId, out var culture)) {
 						return Redirect(culture.CultureInfo);
 					}
 				}
 
 				if (Terraria.Program.LaunchParameters.TryGetValue("-language", out var languageArg)) {
-					var culture = GameCulture._legacyCultures.Values.SingleOrDefault(c => c.Name == languageArg);
+					var culture = LegacyCultures.Values.SingleOrDefault(c => c.Name == languageArg);
 					if (culture != null) {
 						return Redirect(culture.CultureInfo);
 					}
@@ -62,20 +69,9 @@ namespace TShockAPI
 
 				if (LanguageManager.Instance.ActiveCulture == GameCulture.DefaultCulture)
 				{
-					const BindingFlags bf = BindingFlags.NonPublic | BindingFlags.Static;
+					var bf = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
 					// LanguageManager.SetLanguage will change this so we need to reset it back to null
-					var currentThreadUICultureField = typeof(CultureInfo).GetField("s_currentThreadUICulture", bf);
-					currentThreadUICultureField?.SetValue(null, null);
-					var legacyCulture = GameCulture._legacyCultures
-						.FirstOrDefault(c =>
-							c.Value.CultureInfo.Name == CultureInfo.CurrentUICulture.Name ||
-							(c.Value.CultureInfo.Name == "zh-Hans" && CultureInfo.CurrentUICulture.Name == "zh-CN"));
-
-					if (legacyCulture.Value != null)
-					{
-						LanguageManager.Instance.SetLanguage(legacyCulture.Key);
-						currentThreadUICultureField?.SetValue(null, null);
-					}
+					typeof(CultureInfo).GetField("s_currentThreadUICulture", bf)?.SetValue(null, null);
 				}
 				return CultureInfo.CurrentUICulture;
 			}

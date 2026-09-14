@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using TShockAPI.DB.Queries;
 using TShockAPI.Hooks;
 
@@ -36,7 +36,7 @@ namespace TShockAPI.DB
 			database = db;
 
 			var table = new SqlTable("ProjectileBans",
-				new SqlColumn("ProjectileID", MySqlDbType.Int32) {Primary = true},
+				new SqlColumn("ProjectileID", MySqlDbType.Int32) { Primary = true },
 				new SqlColumn("AllowedGroups", MySqlDbType.Text)
 				);
 
@@ -53,7 +53,7 @@ namespace TShockAPI.DB
 
 			while (reader != null && reader.Read())
 			{
-				ProjectileBan ban = new ProjectileBan((short) reader.Get<int>("ProjectileID"));
+				ProjectileBan ban = new ProjectileBan((short)reader.Get<int>("ProjectileID"));
 				ban.SetAllowedGroups(reader.Get<string>("AllowedGroups"));
 				ProjectileBans.Add(ban);
 			}
